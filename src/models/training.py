@@ -20,7 +20,7 @@ class Training(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     duration_time: Mapped[timedelta] = mapped_column(Interval, nullable=False)
-    exercises: Mapped[List["TrainingExercise"]] = relationship("TrainingExercise", back_populates="training")
+    exercises: Mapped[List["TrainingExercise"]] = relationship("TrainingExercise", back_populates="training", cascade="all, delete-orphan")
     user: Mapped["User"] = relationship("User", back_populates="trainings")
 
 class TrainingExercise(Base):
@@ -29,6 +29,7 @@ class TrainingExercise(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     training_id: Mapped[int] = mapped_column(ForeignKey("trainings.id"), nullable=False)
     exercise_id: Mapped[int] = mapped_column(ForeignKey("exercises.id"), nullable=False)
+    sets: Mapped[List["SetsExercise"]] = relationship("SetsExercise", back_populates="training_exercise", cascade="all, delete-orphan")
 
     training: Mapped["Training"] = relationship("Training", back_populates="exercises")
 
