@@ -85,6 +85,12 @@ class TrainingExerciseRepository:
         return result.scalar_one_or_none()
     
     @staticmethod
+    async def get_all_training_exercises(session: AsyncSession, training_id: int) -> Sequence[TrainingExercise]:
+        query = select(TrainingExercise).where(TrainingExercise.training_id == training_id).options(selectinload(TrainingExercise.sets))
+        result = await session.execute(query)
+        return result.scalars().all()
+    
+    @staticmethod
     async def create_training_exercise(session: AsyncSession, training_id: int, exercise_data: TrainingExercisePOST):
         training_exercise = TrainingExercise(
             training_id = training_id,
@@ -134,6 +140,12 @@ class SetsExerciseRepository:
     @staticmethod
     async def get_set_exercise(session: AsyncSession, set_exercise_id: int) -> SetsExercise | None:
         return await session.get(SetsExercise, set_exercise_id)
+    
+    @staticmethod
+    async def get_all_sets_to_exercise(session: AsyncSession, training_exercise_id: int) -> Sequence[SetsExercise]:
+        query = select(SetsExercise).where(SetsExercise.training_exercise_id == training_exercise_id)
+        result = await session.execute(query)
+        return result.scalars().all()
     
     @staticmethod
     async def create_set_exercise(session: AsyncSession, training_exercise_id: int, set_data: SetsExercisePOST):
