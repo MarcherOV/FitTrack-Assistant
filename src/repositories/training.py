@@ -50,8 +50,7 @@ class TrainingRepository:
         
         session.add(training)
         await session.commit()
-        await session.refresh(training)
-        return training
+        return await TrainingRepository.get_training(session, training.id)
     
     @staticmethod
     async def delete_training(session: AsyncSession, training_id: int) -> bool:
@@ -110,8 +109,7 @@ class TrainingExerciseRepository:
         
         session.add(training_exercise)
         await session.commit()
-        await session.refresh(training_exercise)
-        return training_exercise
+        return TrainingExerciseRepository.get_training_exercise(session, training_exercise.id)
     
     @staticmethod
     async def update_training_exercise(session: AsyncSession, training_exercise_id: int, exercise_data: TrainingExerciseUPDATE) -> TrainingExercise | None:

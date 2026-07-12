@@ -1,6 +1,5 @@
 from typing import TYPE_CHECKING, List
-from datetime import datetime
-from datetime import timedelta
+from datetime import datetime , timedelta
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import mapped_column

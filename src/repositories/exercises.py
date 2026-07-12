@@ -1,4 +1,5 @@
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from src.models.exercises import Exercise, Category, Type
@@ -26,9 +27,13 @@ class ExerciseRepository:
             type_id = exercise_data.type_id
         )
         session.add(exercise)
-        await session.commit()
-        await session.refresh()
-        return exercise
+        try:
+            await session.commit()
+            await session.refresh(exercise)
+            return exercise
+        except IntegrityError as e:
+            await session.rollback()
+            raise e
     
     @staticmethod
     async def delete_exercise(session: AsyncSession, exercise_id: int) -> bool:
@@ -66,7 +71,7 @@ class CategoryRepository:
         )
         session.add(category)
         await session.commit()
-        await session.refresh()
+        await session.refresh(category)
         return category
     
     @staticmethod
@@ -105,7 +110,7 @@ class TypeRepository:
         )
         session.add(type_)
         await session.commit()
-        await session.refresh()
+        await session.refresh(type_)
         return type_
     
     @staticmethod
