@@ -34,6 +34,7 @@ class TrainingExercisePOST(BaseModel):
 class TrainingExerciseGET(TrainingExercisePOST, BaseORMModel):
     id: int
     training_id: int
+    sets: list[SetsExerciseGET]
 
 
 class TrainingExerciseUPDATE(BaseModel):
