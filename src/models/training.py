@@ -45,3 +45,5 @@ class SetsExercise(Base):
     distance: Mapped[float] = mapped_column(nullable=True)
     processing_time: Mapped[timedelta] = mapped_column(Interval, nullable=True)
     calories_burned: Mapped[int] = mapped_column(nullable=True)
+
+    training_exercise: Mapped["TrainingExercise"] = relationship("TrainingExercise", back_populates="sets")

@@ -98,9 +98,9 @@ class BodyMeasurementRepository:
     
     @staticmethod
     async def delete_body_measurements(session: AsyncSession, body_measurements_id: int) -> bool:
-        body_measuremets = await BodyMeasurementRepository.get_body_measurement(session, body_measurements_id)
-        if body_measuremets:
-            await session.delete(body_measuremets)
+        body_measurements = await BodyMeasurementRepository.get_body_measurement(session, body_measurements_id)
+        if body_measurements:
+            await session.delete(body_measurements)
             await session.commit()
             return True
         return False
