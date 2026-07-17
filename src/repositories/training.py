@@ -109,7 +109,7 @@ class TrainingExerciseRepository:
         
         session.add(training_exercise)
         await session.commit()
-        return TrainingExerciseRepository.get_training_exercise(session, training_exercise.id)
+        return await TrainingExerciseRepository.get_training_exercise(session, training_exercise.id)
     
     @staticmethod
     async def update_training_exercise(session: AsyncSession, training_exercise_id: int, exercise_data: TrainingExerciseUPDATE) -> TrainingExercise | None:
@@ -126,7 +126,7 @@ class TrainingExerciseRepository:
     
     @staticmethod
     async def delete_training_exercise(session: AsyncSession, training_exercise_id: int) -> bool:
-        training_exercise = await TrainingExerciseRepository.get_training_exercise(session, training_exercise_id)
+        training_exercise = await session.get(TrainingExercise, training_exercise_id)
         if not training_exercise:
             return False
         await session.delete(training_exercise)
@@ -141,7 +141,7 @@ class SetsExerciseRepository:
     
     @staticmethod
     async def get_all_sets_to_exercise(session: AsyncSession, training_exercise_id: int) -> Sequence[SetsExercise]:
-        query = select(SetsExercise).where(SetsExercise.training_exercise_id == training_exercise_id)
+        query = select(SetsExercise).where(SetsExercise.training_exercise_id == training_exercise_id).order_by(SetsExercise.set_number)
         result = await session.execute(query)
         return result.scalars().all()
     
