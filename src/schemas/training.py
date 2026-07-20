@@ -1,6 +1,7 @@
 from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 from datetime import timedelta
+from src.schemas.exercises import ExerciseGET
 
 class BaseORMModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -34,6 +35,7 @@ class TrainingExercisePOST(BaseModel):
 class TrainingExerciseGET(TrainingExercisePOST, BaseORMModel):
     id: int
     training_id: int
+    exercise: ExerciseGET
     sets: list[SetsExerciseGET]
 
 

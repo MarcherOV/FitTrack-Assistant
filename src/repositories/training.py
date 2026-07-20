@@ -19,7 +19,8 @@ class TrainingRepository:
     @staticmethod
     async def get_training_by_user_id(session: AsyncSession, user_id: int) -> Sequence[Training]:
         query = select(Training).where(Training.user_id == user_id).options(
-            selectinload(Training.exercises).selectinload(TrainingExercise.sets)
+            selectinload(Training.exercises).selectinload(TrainingExercise.sets),
+            selectinload(Training.exercises).selectinload(TrainingExercise.exercise)
         )
         result = await session.execute(query)
         return result.scalars().all()

@@ -12,6 +12,12 @@ class UserRepository:
         return result.scalar_one_or_none()
     
     @staticmethod
+    async def get_user(session: AsyncSession, user_id: int) -> User | None:
+        query = select(User).where(User.id == user_id)
+        result = await session.execute(query)
+        return result.scalar_one_or_none()
+
+    @staticmethod
     async def create_user(session: AsyncSession, user_data: UserPOST) -> User:
         user = User(
             telegram_id = user_data.telegram_id,

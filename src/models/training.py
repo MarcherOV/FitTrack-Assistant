@@ -28,7 +28,7 @@ class TrainingExercise(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     training_id: Mapped[int] = mapped_column(ForeignKey("trainings.id"), nullable=False)
     exercise_id: Mapped[int] = mapped_column(ForeignKey("exercises.id"), nullable=False)
-    sets: Mapped[List["SetsExercise"]] = relationship("SetsExercise", back_populates="training_exercise", cascade="all, delete-orphan")
+    sets: Mapped[List["SetsExercise"]] = relationship("SetsExercise", back_populates="training_exercise", cascade="all, delete-orphan", order_by="SetsExercise.set_number")
 
     training: Mapped["Training"] = relationship("Training", back_populates="exercises")
 

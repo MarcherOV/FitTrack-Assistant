@@ -28,3 +28,4 @@ class BodyMeasurementUPDATE(BaseModel):
 
 class BodyInfoWithMeasurementsGET(BodyInfoGET):
     measurements: list[BodyMeasurementGET] = []
+
