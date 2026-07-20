@@ -28,6 +28,16 @@ async def get_body_info_with_measurements(body_info_id: int, session: AsyncSessi
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="The body info does not exist")
     return body_info.measurements
 
+@router_body.get("/users/{user_id}/measurements", response_model=list[BodyInfoWithMeasurementsGET], status_code=status.HTTP_200_OK)
+async def get_all_user_body_info_with_measurements(user_id: int, session: AsyncSession = Depends(get_session)):
+    user_body_info = await BodyInfoRepository.get_all_user_body_info_with_body_measurements(session, user_id)
+    return user_body_info
+
+@router_body.get("/", response_model=list[BodyInfoWithMeasurementsGET], status_code=status.HTTP_200_OK)
+async def get_all_body_info(session: AsyncSession = Depends(get_session)):
+    all_body_info = await BodyInfoRepository.get_all_body_info(session)
+    return all_body_info
+
 @router_body.post("/", response_model=BodyInfoGET, status_code=status.HTTP_201_CREATED)
 async def create_body_info(body_info_data: BodyInfoPOST, session: AsyncSession = Depends(get_session)):
     try:

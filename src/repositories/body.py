@@ -19,11 +19,27 @@ class BodyInfoRepository:
         return result.scalar_one_or_none()
     
     @staticmethod
-    async def get_all_body_info_by_user_id(session: AsyncSession, user_id: int) -> list[BodyInfo]:
-        query = select(BodyInfo).where(BodyInfo.user_id == user_id)
+    async def get_all_user_body_info_with_body_measurements(session: AsyncSession, user_id: int) -> list[BodyInfo]:
+        query = select(BodyInfo).where(BodyInfo.user_id == user_id).options(selectinload(BodyInfo.measurements))
         result = await session.execute(query)
         return result.scalars().all()
     
+    @staticmethod
+    async def get_all_body_info_by_user_id(session: AsyncSession, user_id: int) -> list[BodyInfo]:
+        query = (
+            select(BodyInfo)
+            .where(BodyInfo.user_id == user_id)
+            .options(selectinload(BodyInfo.measurements))
+        )
+        result = await session.execute(query)
+        return result.scalars().all()
+    
+    @staticmethod
+    async def get_all_body_info(session: AsyncSession) -> list[BodyInfo]:
+        query = select(BodyInfo).options(selectinload(BodyInfo.measurements))
+        result = await session.execute(query)
+        return result.scalars().all()
+
     @staticmethod
     async def create_body_info(session: AsyncSession, body_info_data: BodyInfoPOST) -> BodyInfo:
         body_info = BodyInfo(

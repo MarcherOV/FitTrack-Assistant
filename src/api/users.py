@@ -2,7 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.db.database import get_session
 from src.schemas.users import UserGET, UserPOST
+from src. schemas.training import TrainingGET
 from src.repositories.users import UserRepository
+from src.repositories.training import TrainingRepository
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
@@ -20,3 +22,12 @@ async def get_user_by_telegram_id(telegram_id: int, session: AsyncSession = Depe
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     return user
+
+@router.get("/{user_id}/trainings/", response_model=list[TrainingGET], status_code=status.HTTP_200_OK)
+async def get_all_user_trainings(user_id: int, session: AsyncSession = Depends(get_session)):
+    user = await UserRepository.get_user(session, user_id)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    trainings = await TrainingRepository.get_training_by_user_id(session, user_id)
+    return trainings
+
