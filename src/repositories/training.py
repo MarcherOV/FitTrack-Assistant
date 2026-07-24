@@ -11,7 +11,8 @@ class TrainingRepository:
     @staticmethod
     async def get_training(session: AsyncSession, training_id: int) -> Training | None:
         query = select(Training).where(Training.id == training_id).options(
-            selectinload(Training.exercises).selectinload(TrainingExercise.sets)
+            selectinload(Training.exercises).selectinload(TrainingExercise.sets),
+            selectinload(Training.exercises).selectinload(TrainingExercise.exercise)
         )
         result = await session.execute(query)
         return result.scalar_one_or_none()
@@ -79,7 +80,7 @@ class TrainingExerciseRepository:
 
     @staticmethod
     async def get_training_exercise(session: AsyncSession, training_exercise_id: int) -> TrainingExercise | None:
-        query = select(TrainingExercise).where(TrainingExercise.id == training_exercise_id).options(selectinload(TrainingExercise.sets))
+        query = select(TrainingExercise).where(TrainingExercise.id == training_exercise_id).options(selectinload(TrainingExercise.exercise), selectinload(TrainingExercise.sets))
 
         result = await session.execute(query)
         return result.scalar_one_or_none()
