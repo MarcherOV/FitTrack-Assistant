@@ -9,6 +9,7 @@ from src.bot.handlers.start import router as start_router
 from src.bot.handlers.training import router as training_router
 from src.bot.handlers.body import router as body_router
 from src.bot.handlers.all_trainings import router as all_trainings_router
+from src.bot.handlers.all_body_info import router as all_body_info_router
 from src.bot.middlewares.api import *
 from src.bot.middlewares.auth import *
 from src.bot.services.api_client import *
@@ -29,6 +30,7 @@ async def main():
     db.include_router(training_router)
     db.include_router(body_router)
     db.include_router(all_trainings_router)
+    db.include_router(all_body_info_router)
     await db.start_polling(bot)
 
 if __name__ == "__main__":

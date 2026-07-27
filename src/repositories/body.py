@@ -1,8 +1,9 @@
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from src.models.body import BodyInfo, BodyMeasurement
 from src.schemas.body import BodyInfoGET, BodyInfoPOST, BodyInfoUPDATE, BodyMeasurementGET, BodyMeasurementPOST, BodyMeasurementUPDATE, BodyInfoWithMeasurementsGET
+from typing import Sequence, Tuple
 
 class BodyInfoRepository:
 
@@ -19,10 +20,18 @@ class BodyInfoRepository:
         return result.scalar_one_or_none()
     
     @staticmethod
-    async def get_all_user_body_info_with_body_measurements(session: AsyncSession, user_id: int) -> list[BodyInfo]:
-        query = select(BodyInfo).where(BodyInfo.user_id == user_id).options(selectinload(BodyInfo.measurements))
-        result = await session.execute(query)
-        return result.scalars().all()
+    async def get_all_user_body_info_with_body_measurements(session: AsyncSession, user_id: int, page: int = 1, page_size: int = 5) -> Tuple[Sequence[BodyInfo], int]:
+        count_query = (select(func.count()).select_from(BodyInfo).where(BodyInfo.user_id == user_id))
+        total_result = await session.execute(count_query)
+        total = total_result.scalar() or 0
+        offset = (page - 1) * page_size
+        item_query = (select(BodyInfo).where(BodyInfo.user_id == user_id).options(selectinload(BodyInfo.measurements)
+                                                                                 ).order_by(BodyInfo.date.desc())
+                                                                                 .offset(offset)
+                                                                                 .limit(page_size))
+        items_result = await session.execute(item_query)
+        items = items_result.scalars().all()
+        return items, total
     
     @staticmethod
     async def get_all_body_info_by_user_id(session: AsyncSession, user_id: int) -> list[BodyInfo]:
