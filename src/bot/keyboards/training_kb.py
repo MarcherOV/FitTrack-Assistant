@@ -28,6 +28,9 @@ class TrainingActionCallback(CallbackData, prefix="training"):
     action: str #edit or delete
     id: int
 
+class TrainingPagCallback(CallbackData, prefix="tr_pag"):
+    page: int
+
 
 training_kb = InlineKeyboardMarkup(inline_keyboard=[
     [InlineKeyboardButton(text="Add exercise", callback_data="add_exercise"), InlineKeyboardButton(text="End a training!", callback_data="end_training")]])
@@ -39,7 +42,10 @@ set_kb = InlineKeyboardMarkup(inline_keyboard=[
 
 
 set_edit_training_kb = InlineKeyboardMarkup(inline_keyboard=[
-    [InlineKeyboardButton(text="Add set", callback_data="add_set_in_edit_mode"), InlineKeyboardButton(text="Back to exercises", callback_data="back_to_see_all_trainings")]
+    [
+        InlineKeyboardButton(text="Add set", callback_data="add_first_set_in_edit_mode"),
+        InlineKeyboardButton(text="Back to exercises", callback_data="back_to_see_all_trainings")
+    ]
 ])
 
 
@@ -49,7 +55,10 @@ continue_set_adding_kb = InlineKeyboardMarkup(inline_keyboard=[
 
 
 continue_set_adding_edit_mode_kb = InlineKeyboardMarkup(inline_keyboard=[
-    [InlineKeyboardButton(text="Yes", callback_data="add_set_in_edit_mode"), InlineKeyboardButton(text="No", callback_data="back_to_see_all_trainings")]
+    [
+        InlineKeyboardButton(text="Yes", callback_data="add_another_set_in_edit_mode"),
+        InlineKeyboardButton(text="No", callback_data="back_to_see_all_trainings")
+    ]
 ])
 
 
@@ -108,7 +117,7 @@ def create_edit_training_choise_exercise_kb(training_exercises):
 
 
 
-def create_edit_training_choise_set_kb(sets_exercise, exercise_type_id):
+def create_edit_training_choice_set_kb(sets_exercise, exercise_type_id):
     keyboard = InlineKeyboardBuilder()
     text_inf = INFO_TEXT_ABOUT_SET.get(exercise_type_id)
     for set in sets_exercise:
@@ -135,3 +144,39 @@ def create_edit_training_choise_set_kb(sets_exercise, exercise_type_id):
     keyboard.row(InlineKeyboardButton(text="Add new set", callback_data="add_set_to_exercise", style="primary"),)
     keyboard.row(InlineKeyboardButton(text="Back to exercise options", callback_data="back_to_ex_options", style="danger"),)
     return keyboard.as_markup() 
+
+
+def create_paginated_training_kb(items: list[dict], page: int,
+                                 total_pages: int, has_prev: bool,
+                                 has_next: bool):
+    builder = InlineKeyboardBuilder()
+    for item in items:
+        t_id = item["id"]
+        builder.row(
+            InlineKeyboardButton(text=f"✏️ Edit #{t_id}", callback_data=TrainingActionCallback(action="edit", id=t_id).pack()),
+            InlineKeyboardButton(text=f"🗑 Delete #{t_id}", callback_data=TrainingActionCallback(action="delete", id=t_id).pack())
+        )
+
+        nav_row = []
+
+        if has_prev:
+            nav_row.append(
+                InlineKeyboardButton(text="⬅️", callback_data=TrainingPagCallback(page=page - 1).pack())
+            )
+        else:
+            nav_row.append(InlineKeyboardButton(text=" ", callback_data="pap_noop"))
+        nav_row.append(
+            InlineKeyboardButton(
+                text=f"📄 {page} / {total_pages}", callback_data="pag_noop"
+            )
+        )
+        if has_next:
+            nav_row.append(
+               InlineKeyboardButton(text="➡️", callback_data=TrainingPagCallback(page=page + 1).pack())
+            )
+        else:
+            nav_row.append(InlineKeyboardButton(text=" ", callback_data="pap_noop"))
+
+        builder.row(*nav_row)
+
+        return builder.as_markup()

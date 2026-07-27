@@ -1,7 +1,7 @@
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
-from typing import Sequence
+from typing import Sequence, Tuple
 from src.models.training import Training, TrainingExercise, SetsExercise
 from src.schemas.training import TrainingPOST, TrainingUPDATE, TrainingExercisePOST, TrainingExerciseUPDATE, SetsExercisePOST, SetsExerciseUPDATE
 
@@ -18,13 +18,21 @@ class TrainingRepository:
         return result.scalar_one_or_none()
     
     @staticmethod
-    async def get_training_by_user_id(session: AsyncSession, user_id: int) -> Sequence[Training]:
-        query = select(Training).where(Training.user_id == user_id).options(
+    async def get_training_by_user_id(session: AsyncSession, user_id: int, page: int = 1, page_size: int = 5) -> Tuple[Sequence[Training], int]:
+        count_query = (select(func.count()).select_from(Training).where(Training.user_id == user_id))
+        total_result = await session.execute(count_query)
+        total = total_result.scalar() or 0
+        offset = (page - 1) * page_size
+        item_query = (select(Training).where(Training.user_id == user_id).options(
             selectinload(Training.exercises).selectinload(TrainingExercise.sets),
             selectinload(Training.exercises).selectinload(TrainingExercise.exercise)
         )
-        result = await session.execute(query)
-        return result.scalars().all()
+        .order_by(Training.date.desc())
+        .offset(offset)
+        .limit(page_size))
+        items_result = await session.execute(item_query)
+        items = items_result.scalars().all()
+        return items, total
     
     @staticmethod
     async def create_training(session: AsyncSession, training_data: TrainingPOST) -> Training:

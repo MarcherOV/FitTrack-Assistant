@@ -1,9 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.db.database import get_session
 from src.schemas.body import *
 from src.repositories.body import *
+from src.repositories.users import UserRepository
+from src.pagination.pagination import PaginatedResponse
+from math import ceil
 
 router_body = APIRouter(prefix="/body-info", tags=["Body"])
 
@@ -28,10 +31,26 @@ async def get_body_info_with_measurements(body_info_id: int, session: AsyncSessi
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="The body info does not exist")
     return body_info.measurements
 
-@router_body.get("/users/{user_id}/measurements", response_model=list[BodyInfoWithMeasurementsGET], status_code=status.HTTP_200_OK)
-async def get_all_user_body_info_with_measurements(user_id: int, session: AsyncSession = Depends(get_session)):
-    user_body_info = await BodyInfoRepository.get_all_user_body_info_with_body_measurements(session, user_id)
-    return user_body_info
+@router_body.get("/users/{user_id}/measurements", response_model=PaginatedResponse[BodyInfoWithMeasurementsGET], status_code=status.HTTP_200_OK)
+async def get_all_user_body_info_with_measurements(user_id: int, session: AsyncSession = Depends(get_session), 
+                                                   page: int = Query(1, ge=1, description="Page number"),
+                                                   page_size: int = Query(5, ge=1, le=50, description="Number of entries on the page")):
+    user = await UserRepository.get_user(session, user_id)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    user_body_info, total = (await BodyInfoRepository.get_all_user_body_info_with_body_measurements(session=session, user_id=user_id, page=page, page_size=page_size))
+    total_pages = ceil(total / page_size) if total > 0 else 0
+    has_next = page < total_pages
+    has_previous = page > 1 and page <= total_pages + 1
+    return PaginatedResponse(
+        items=user_body_info,
+        total=total,
+        page=page,
+        page_size=page_size,
+        total_pages=total_pages,
+        has_next=has_next,
+        has_previous=has_previous,
+    )
 
 @router_body.get("/", response_model=list[BodyInfoWithMeasurementsGET], status_code=status.HTTP_200_OK)
 async def get_all_body_info(session: AsyncSession = Depends(get_session)):
