@@ -31,7 +31,7 @@ async def get_body_info_with_measurements(body_info_id: int, session: AsyncSessi
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="The body info does not exist")
     return body_info.measurements
 
-@router_body.get("/users/{user_id}/measurements", response_model=PaginatedResponse[BodyInfoWithMeasurementsGET], status_code=status.HTTP_200_OK)
+@router_body.get("/users/{user_id}/measurements/", response_model=PaginatedResponse[BodyInfoWithMeasurementsGET], status_code=status.HTTP_200_OK)
 async def get_all_user_body_info_with_measurements(user_id: int, session: AsyncSession = Depends(get_session), 
                                                    page: int = Query(1, ge=1, description="Page number"),
                                                    page_size: int = Query(5, ge=1, le=50, description="Number of entries on the page")):

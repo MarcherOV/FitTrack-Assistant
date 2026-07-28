@@ -7,9 +7,10 @@ from aiogram.fsm.context import FSMContext
 from httpx import HTTPStatusError
 from src.bot.services.api_client import APIClient
 from src.bot.keyboards.body_kb import (
-    BodyPartCallback, skip_weight_kb, after_weight_kb, 
+    BodyPartCallback, BodyInfoActionCallback, BodyInfoPagCallback, skip_weight_kb, after_weight_kb, 
     create_measurements_kb, BODY_PARTS, create_body_info_action_kb, BodyInfoActionCallback,
-    create_edit_body_choice_kb, create_measurements_to_edit_kb)
+    create_edit_body_choice_kb, create_measurements_to_edit_kb,
+    create_paginated_body_kb)
 from src.bot.keyboards.start_kb import start_kb
 
 router = Router()
@@ -22,52 +23,83 @@ class EditBodyInfoFSM(StatesGroup):
     menu_measurements_to_edit = State()
     waiting_for_part_value_to_edit = State()
 
+def format_body_page(items: list[dict], page: int, total_pages: int) -> str:
+    if not items:
+        return "🤷‍♂️ There are no entries on this page."
+
+    lines = [f"🗓 **Your Body Info History (Page {page} of {total_pages}):**\n"]
+
+    for t in items:
+        date_str = datetime.fromisoformat(t["date"]).strftime("%d.%m.%Y %H:%M")
+        lines.append(f"🏋️ **Body Info #{t['id']} of {date_str}**")
+        weight = t["weight"]
+        if weight:
+            lines.append(f"Weight: {weight}")
+        else:
+            lines.append("No info about weight")
+        measurements = t.get("measurements", [])
+        if not measurements:
+            lines.append("  _(empty body measurements)_")
+        else:
+            lines.append(f"Measurements:")
+            for ms in measurements:
+                ms_name = ms.get("measurements", {})
+                for key, name in BODY_PARTS.items():
+                    if key in ms_name:
+                        btn_text = f"{name}: {ms_name[key]} cm"
+                    else:
+                        btn_text = f"+ {name}"
+                    lines.append(btn_text)
+        lines.append("")
+
+    return "\n".join(lines)
+
 
 @router.message(F.text == "See all my body info")
 async def see_all_body_info(message: Message, api_client: APIClient, db_user: dict):
     user_id = db_user.get("id")
     try:
-        records = await api_client.get(f"/body-info/users/{user_id}/measurements")
-        if not records:
+        data = await api_client.get(f"/body-info/users/{user_id}/measurements/?page=1&page_size=3")  
+        items = data.get("items", [])
+        if not items:
             return await message.answer("🤷‍♂️ You don't have any saved body measurements yet.")
-        last_records = records[-5:]
-        
-        await message.answer("📊 **Your body measurement history:**")
-        for rec in last_records:
-            rec_id = rec["id"]
-            date_obj = datetime.fromisoformat(rec["date"])
-            date_str = date_obj.strftime("%d.%m.%Y %H:%M")
-            weight = rec.get("weight")
-            
-            text = f"📅 **Post from {date_str}**\n"
-            
-            if weight is not None:
-                text += f"  ⚖️ **Weight:** {weight} kg\n"
-            else:
-                text += "  ⚖️ **Weight:** _(not specified)_\n"
-                
-            measurements_list = rec.get("measurements", [])
-            measurement_id = None
-            if measurements_list:
-                for m_item in measurements_list:
-                    m_dict = m_item.get("measurements", {})
-                    if m_dict:
-                        text += "  📏 **Volumes:**\n"
-                        for part_key, part_val in m_dict.items():
-                            part_name = BODY_PARTS.get(part_key, part_key.capitalize())
-                            text += f"    • {part_name}: {part_val} cm\n"
-                    m_id = m_item.get("id")
-                    if m_id:
-                        measurement_id = m_id
-            else:
-                if weight is None:
-                    text += "  _(empty entry)_\n"
-            kb = create_body_info_action_kb(body_info_id=rec_id, measurement_id=measurement_id)
-            await message.answer(text, reply_markup=kb, parse_mode="Markdown")
+        text = format_body_page(items=items, page=data["page"], total_pages=data["total_pages"])
+        kb = create_paginated_body_kb(
+            items=items, page=data["page"],
+            total_pages=data["total_pages"],
+            has_prev=data["has_previous"],
+            has_next=data["has_next"]
+        )
+        await message.answer(text, reply_markup=kb, parse_mode="Markdown")
     except HTTPStatusError as e:
         logger.exception("Error fetching body info: {e}")
         await message.answer("❌ An error occurred while loading the history.")
 
+@router.callback_query(BodyInfoPagCallback.filter())
+async def process_training_pagination(
+    callback: CallbackQuery, callback_data: BodyInfoPagCallback,
+    api_client: APIClient, db_user: dict):
+    user_id = db_user.get("id")
+    target_page = callback_data.page
+    try:
+        data = await api_client.get(f"/body-info/users/{user_id}/measurements/?page={target_page}&page_size=3")
+        items = data.get("items", [])
+        text = format_body_page(items=items, page=data["page"], total_pages=data["total_pages"])
+        kb = create_paginated_body_kb(
+            items=items, page=data["page"],
+            total_pages=data["total_pages"],
+            has_prev=data["has_previous"],
+            has_next=data["has_next"]
+        )
+        await callback.message.edit_text(text, reply_markup=kb, parse_mode="Markdown")
+        await callback.answer()
+    except HTTPStatusError as e:
+        logger.exception("Error fetching trainings page %s: %s", target_page, e)
+        await callback.answer("❌ Failed to load page.", show_alert=True)
+
+@router.callback_query(F.data == "pag_noop")
+async def ignore_noop_callback(callback: CallbackQuery):
+    await callback.answer()
 
 @router.callback_query(BodyInfoActionCallback.filter(F.action == "delete"))
 async def delete_body_info(callback: CallbackQuery, callback_data: BodyInfoActionCallback,
