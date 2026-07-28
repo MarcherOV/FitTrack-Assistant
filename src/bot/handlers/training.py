@@ -11,14 +11,18 @@ from src.bot.services.api_client import APIClient
 from src.bot.services.set_collector import handle_process_universal_field_input
 from src.bot.keyboards.start_kb import start_kb
 from src.bot.keyboards.training_kb import (CategoryCallback, ExerciseCallback, training_kb, set_kb,
-                                            continue_set_adding_kb, create_categories_kb, create_exercises_kb)
+                                            continue_set_adding_kb, create_categories_kb, create_exercises_kb,
+                                            date_choice_kb, duration_choice_kb)
 
 from src.bot.services.exercise_type_config import EXERCISE_TYPE_CONFIG, FIELD_PROMPTS
 
 
 class WorkoutFSM(StatesGroup):
+    waiting_for_date = State()
+    waiting_for_duration = State()
     active_training = State()
     waiting_for_field_value = State()
+    waiting_for_final_duration = State()
 
 
 router = Router()
@@ -26,25 +30,95 @@ router = Router()
 logger = logging.getLogger(__name__)
 
 @router.message(F.text == "Add training")
-async def add_training(message: Message, api_client: APIClient, db_user: dict, state: FSMContext):
-    user_id = db_user.get("id")
-    date = datetime.now().isoformat()
-    payload = {"user_id": user_id,
-               "date": date,
-               "duration_time": int(timedelta().total_seconds()),
-               "exercises": []}
+async def start_add_training(message: Message, state: FSMContext):
+    await state.clear()
+    await state.set_state(WorkoutFSM.waiting_for_date)
+    await message.answer(
+        "📅 **When did the practice take place?**\n\n"
+        "Click the button below if you're working out today, or enter a date in the format `DD.MM.YYYY` (for example, `28.07.2026`):",
+        reply_markup=date_choice_kb,
+        parse_mode="Markdown"
+    )
+
+@router.callback_query(F.data == "date_now", WorkoutFSM.waiting_for_date)
+async def process_date_now(callback: CallbackQuery, state: FSMContext):
+    await state.update_data(workout_date=datetime.now().isoformat())
+    await ask_for_duration(callback.message, state, is_callback=True)
+    await callback.answer()
+
+@router.message(WorkoutFSM.waiting_for_date)
+async def process_date_custom(message: Message, state: FSMContext):
     try:
-        data = await api_client.post("/trainings/", json_data=payload)
-        await state.update_data(training_id=data.get("id"))
+        dt = datetime.strptime(message.text.strip(), "%d.%m.%Y")
+        now = datetime.now()
+        dt = dt.replace(hour=now.hour, minute=now.minute, second=0)
+        
+        await state.update_data(workout_date=dt.isoformat())
+        await ask_for_duration(message, state, is_callback=False)
+    except ValueError:
+        await message.answer("⚠️ Incorrect format! Enter the date as `DD.MM.YYYY` (for example, 28.07.2026) or click the button.")
+
+async def ask_for_duration(message: Message, state: FSMContext, is_callback: bool = False):
+    await state.set_state(WorkoutFSM.waiting_for_duration)
+    text = (
+        "⏱ **How many minutes did the workout last?**\n\n"
+        "Enter a number (for example, `60` or `45`), or click the button below to record the time after you finish your exercises:"
+    )
+    if is_callback:
+        await message.edit_text(text, reply_markup=duration_choice_kb, parse_mode="Markdown")
+    else:
+        await message.answer(text, reply_markup=duration_choice_kb, parse_mode="Markdown")
+
+@router.callback_query(F.data == "duration_skip", WorkoutFSM.waiting_for_duration)
+async def process_duration_skip(callback: CallbackQuery, state: FSMContext, api_client: APIClient, db_user: dict):
+    await create_training_record(callback, state, api_client, db_user.get("id"), duration_minutes=0)
+    await callback.answer()
+
+@router.message(WorkoutFSM.waiting_for_duration)
+async def process_duration_custom(message: Message, state: FSMContext, api_client: APIClient, db_user: dict):
+    try:
+        minutes = int(message.text.strip())
+        if minutes < 0: raise ValueError
+        await create_training_record(message, state, api_client, db_user.get("id"), duration_minutes=minutes)
+    except ValueError:
+        await message.answer("⚠️ Enter a positive integer (for example, 60):")
+
+async def create_training_record(event, state: FSMContext, api_client: APIClient, user_id: int, duration_minutes: int):
+    data = await state.get_data()
+    date_str = data.get("workout_date", datetime.now().isoformat())
+    duration_seconds = int(timedelta(minutes=duration_minutes).total_seconds())
+    
+    payload = {
+        "user_id": user_id,
+        "date": date_str,
+        "duration_time": duration_seconds,
+        "exercises": []
+    }
+    
+    try:
+        res = await api_client.post("/trainings/", json_data=payload)
+        training_id = res.get("id")
+        
+        await state.update_data(training_id=training_id, duration_minutes=duration_minutes)
         await state.set_state(WorkoutFSM.active_training)
-
-        training_id = data.get("id")
-        return await message.answer(f"Ok! The training has id {training_id}", reply_markup=training_kb)
-
+        
+        date_display = datetime.fromisoformat(date_str).strftime("%d.%m.%Y")
+        text = (
+            f"✅ **Workout #{training_id} successfully created!**\n"
+            f"📅 Date: `{date_display}` | ⏱ Duration: `{duration_minutes} min`\n\n"
+            "Now add the first exercise:"
+        )
+        
+        if isinstance(event, CallbackQuery):
+            await event.message.edit_text(text, reply_markup=training_kb, parse_mode="Markdown")
+        else:
+            await event.answer(text, reply_markup=training_kb, parse_mode="Markdown")
+            
     except HTTPStatusError as e:
-        logger.error(f"API Error: {e.response.status_code} - {e.response.text}")
-        await message.answer("⚠️ Something went wrong while saving the data to the server. Please try again later.")
-
+        logger.exception("Error creating training: %s", e)
+        msg = "⚠️ An error occurred while saving the workout to the server."
+        if isinstance(event, CallbackQuery): await event.message.answer(msg)
+        else: await event.answer(msg)
 
 @router.callback_query(F.data == "add_exercise")
 async def add_exercise(callback: CallbackQuery, api_client: APIClient, db_user: dict):
@@ -199,7 +273,42 @@ async def back_to_training(callback: CallbackQuery, state: FSMContext, api_clien
 
 
 @router.callback_query(F.data == "end_training")
-async def back_to_start_menu(callback: CallbackQuery, state: FSMContext):
-    await state.clear()
-    await callback.message.edit_text("What would you like to do next?")
+async def back_to_start_menu(callback: CallbackQuery, state: FSMContext, api_client: APIClient):
+    data = await state.get_data()
+    duration = data.get("duration_minutes", 0)
+    training_id = data.get("training_id")
+
+    if duration > 0 or not training_id:
+        await state.clear()
+        await callback.message.edit_text("🎉 **The training session was a success!**\nWhat do we do next?", parse_mode="Markdown")
+        await callback.message.answer("Select an action from the menu:", reply_markup=start_kb)
+        await callback.answer()
+        return
+
+    await state.set_state(WorkoutFSM.waiting_for_final_duration)
+    await callback.message.edit_text(
+        "🏁 **The workout is over!**\n\n⏱ How many minutes did it last in total? (Enter a number, for example, `55`):",
+        parse_mode="Markdown"
+    )
     await callback.answer()
+
+@router.message(WorkoutFSM.waiting_for_final_duration)
+async def process_final_duration(message: Message, state: FSMContext, api_client: APIClient):
+    try:
+        minutes = int(message.text.strip())
+        if minutes <= 0: raise ValueError
+    except ValueError:
+        return await message.answer("⚠️ Enter the correct number of minutes (a positive integer):")
+        
+    data = await state.get_data()
+    training_id = data.get("training_id")
+    payload = {"duration_time": int(timedelta(minutes=minutes).total_seconds())}
+    
+    try:
+        await api_client.patch(f"/trainings/{training_id}", json_data=payload)
+        await state.clear()
+        await message.answer(f"🎉 **Recorded: {minutes} min!** The workout has been saved in your history.", reply_markup=start_kb)
+    except HTTPStatusError:
+        logger.exception("Failed to patch final duration")
+        await state.clear()
+        await message.answer("⚠️ The workout is complete, but the time could not be updated on the server.", reply_markup=start_kb)

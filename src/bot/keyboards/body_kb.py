@@ -24,6 +24,11 @@ after_weight_kb = InlineKeyboardMarkup(inline_keyboard=[
     [InlineKeyboardButton(text="🏁 Let's wrap it up here", callback_data="finish_body_info")]
 ])
 
+body_date_choice_kb = InlineKeyboardMarkup(inline_keyboard=[
+    [InlineKeyboardButton(text="🕒 Today (Now)", callback_data="body_date_now")],
+    [InlineKeyboardButton(text="❌ Cancel", callback_data="finish_body_info")]
+])
+
 BODY_PARTS = {
     "chest": "Chest",
     "waist": "Waist",

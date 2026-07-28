@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 from aiogram.types import Message, CallbackQuery
 from aiogram import Router, F
 from aiogram.fsm.state import StatesGroup, State
@@ -6,7 +7,8 @@ from aiogram.fsm.context import FSMContext
 from httpx import HTTPStatusError
 from src.bot.services.api_client import APIClient
 from src.bot.keyboards.body_kb import (
-    BodyPartCallback, skip_weight_kb, after_weight_kb, 
+    BodyPartCallback, skip_weight_kb, after_weight_kb,
+    body_date_choice_kb, 
     create_measurements_kb, BODY_PARTS)
 from src.bot.keyboards.start_kb import start_kb
 
@@ -15,6 +17,7 @@ router = Router()
 logger = logging.getLogger(__name__)
 
 class BodyInfoFSM(StatesGroup):
+    waiting_for_date = State()
     waiting_for_weight = State()
     menu_measurements = State()
     waiting_for_part_value = State()
@@ -22,16 +25,49 @@ class BodyInfoFSM(StatesGroup):
 @router.message(F.text == "Add body info")
 async def start_body_info(message: Message, state: FSMContext):
     await state.clear()
+    await state.set_state(BodyInfoFSM.waiting_for_date)
+    await message.answer(
+        "📅 **When were these measurements taken?**\n\n"
+        "Click below for today, or enter a custom date in `DD.MM.YYYY` format (for example: `28.07.2026`):",
+        reply_markup=body_date_choice_kb,
+        parse_mode="Markdown"
+    )
+
+@router.callback_query(F.data == "body_date_now", BodyInfoFSM.waiting_for_date)
+async def process_body_date_now(callback: CallbackQuery, state: FSMContext):
+    await state.update_data(body_date=datetime.now().isoformat())
+    await ask_for_weight(callback.message, state, is_callback=True)
+    await callback.answer()
+
+@router.message(BodyInfoFSM.waiting_for_date)
+async def process_body_date_custom(message: Message, state: FSMContext):
+    try:
+        dt = datetime.strptime(message.text.strip(), "%d.%m.%Y")
+        # Keep current hour/minute so the timestamp feels natural
+        now = datetime.now()
+        dt = dt.replace(hour=now.hour, minute=now.minute, second=0)
+        
+        await state.update_data(body_date=dt.isoformat())
+        await ask_for_weight(message, state, is_callback=False)
+    except ValueError:
+        await message.answer("⚠️ Invalid format! Please enter the date as `DD.MM.YYYY` (e.g., 28.07.2026) or click the button.")
+
+async def ask_for_weight(message: Message, state: FSMContext, is_callback: bool = False):
     await state.set_state(BodyInfoFSM.waiting_for_weight)
-    await message.answer("⚖️ **Enter your current weight in kg** (for example: *75.5*):\n\n"
-                         "Or click the button below if you want to record only your body measurements.",
-                         reply_markup=skip_weight_kb)
-    
-async def _create_base_body_info(api_client: APIClient, user_id: int, weight: float | None) -> int:
+    text = (
+        "⚖️ **Enter your weight in kg** (for example: *75.5*):\n\n"
+        "Or click the button below if you want to record only your body measurements."
+    )
+    if is_callback:
+        await message.edit_text(text, reply_markup=skip_weight_kb, parse_mode="Markdown")
+    else:
+        await message.answer(text, reply_markup=skip_weight_kb, parse_mode="Markdown")
+
+async def _create_base_body_info(api_client: APIClient, user_id: int, weight: float | None, date_str: str) -> int:
     payload = {
         "user_id": user_id,
         "weight": weight,
-        "date": datetime.now().isoformat()
+        "date": date_str
     }
     res = await api_client.post("/body-info/", json_data=payload)
     return res.get("id")
@@ -46,12 +82,19 @@ async def process_weight_input(message: Message, state: FSMContext, api_client: 
         return await message.answer("⚠️ Please enter a valid number (for example: 70 or 70.5).")
     
     try:
-        body_info_id = await _create_base_body_info(api_client, db_user.get("id"), weight)
+        data = await state.get_data()
+        date_str = data.get("body_date", datetime.now().isoformat())
+        body_info_id = await _create_base_body_info(api_client, db_user.get("id"), weight, date_str)
         await state.update_data(body_info_id = body_info_id, measurements = {})
         await state.set_state(BodyInfoFSM.menu_measurements)
 
-        await message.answer(f"✅ Your weight of **{weight} kg** has been successfully saved!\n\nWould you like to add your body measurements (circumferences in cm)?",
-                             reply_markup=after_weight_kb)
+        date_display = datetime.fromisoformat(date_str).strftime("%d.%m.%Y")
+        await message.answer(
+            f"✅ Weight of **{weight} kg** saved for `{date_display}`!\n\n"
+            "Would you like to add your body measurements (circumferences in cm)?",
+            reply_markup=after_weight_kb,
+            parse_mode="Markdown"
+        )
     except HTTPStatusError as e:
         await message.answer("❌ Server save error.")
 
@@ -60,17 +103,23 @@ async def process_weight_input(message: Message, state: FSMContext, api_client: 
 async def process_skip_weight(callback: CallbackQuery, state: FSMContext, api_client: APIClient, db_user: dict):
     await callback.answer()
     try:
-        body_info_id = await _create_base_body_info(api_client, db_user.get("id"), weight=None)
-        await state.update_data(body_info_id = body_info_id, measurements = {})
+        data = await state.get_data()
+        date_str = data.get("body_date", datetime.now().isoformat())
+        
+        body_info_id = await _create_base_body_info(api_client, db_user.get("id"), weight=None, date_str=date_str)
+        await state.update_data(body_info_id=body_info_id, measurements={})
         await state.set_state(BodyInfoFSM.menu_measurements)
 
+        date_display = datetime.fromisoformat(date_str).strftime("%d.%m.%Y")
         await callback.message.edit_text(
-            "⏩ Weight is missing.\n\nWould you like to add your body measurements (circumferences in cm)?",
-            reply_markup=after_weight_kb
+            f"⏩ Weight skipped for `{date_display}`.\n\n"
+            "Would you like to add your body measurements (circumferences in cm)?",
+            reply_markup=after_weight_kb,
+            parse_mode="Markdown"
         )
     except HTTPStatusError as e:
-        logger.error(f"API Error: {e.response.status_code} - {e.response.text}")
-        return await callback.message.answer("⚠️ Something went wrong while saving the data to the server. Please try again later.")
+        logger.exception("API Error: %s", e)
+        await callback.message.edit_text("⚠️ Something went wrong while saving the data to the server. Please try again later.")
 
 
 @router.callback_query(F.data == "go_to_measurements")
