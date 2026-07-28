@@ -12,6 +12,9 @@ class BodyInfoActionCallback(CallbackData, prefix="body_info"):
     id: int
     measurement_id: Optional[int] = None
 
+class BodyInfoPagCallback(CallbackData, prefix="body_pg"):
+    page: int
+
 skip_weight_kb = InlineKeyboardMarkup(inline_keyboard=[
     [InlineKeyboardButton(text="➡️ Skip (no weight)", callback_data="skip_weight")]
 ])
@@ -89,3 +92,34 @@ def create_edit_body_choice_kb():
     keyboard.add(InlineKeyboardButton(text="❌ Cancel", callback_data="cancel_edit"))
     return keyboard.adjust(1).as_markup()
 
+def create_paginated_body_kb(items: list[dict], page: int,
+                             total_pages: int, has_prev: bool,
+                             has_next: bool):
+    builder = InlineKeyboardBuilder()
+    for item in items:
+        t_id = item["id"]
+        builder.row(
+            InlineKeyboardButton(text=f"✏️ Edit #{t_id}", callback_data=BodyInfoActionCallback(action="edit", id=t_id).pack()),
+            InlineKeyboardButton(text=f"🗑 Delete #{t_id}", callback_data=BodyInfoActionCallback(action="delete", id=t_id).pack())
+        )
+    nav_row = []
+
+    if has_prev:
+        nav_row.append(
+            InlineKeyboardButton(text="⬅️", callback_data=BodyInfoPagCallback(page=page - 1).pack())
+        )
+    else:
+        nav_row.append(InlineKeyboardButton(text=" ", callback_data="pap_noop"))
+    nav_row.append(
+        InlineKeyboardButton(
+            text=f"📄 {page} / {total_pages}", callback_data="pag_noop"
+        )
+        )
+    if has_next:
+        nav_row.append(
+            InlineKeyboardButton(text="➡️", callback_data=BodyInfoPagCallback(page=page + 1).pack())
+        )
+    else:
+        nav_row.append(InlineKeyboardButton(text=" ", callback_data="pap_noop"))
+    builder.row(*nav_row)
+    return builder.as_markup()

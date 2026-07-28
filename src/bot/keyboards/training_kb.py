@@ -3,6 +3,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.filters.callback_data import CallbackData
 from src.bot.services.exercise_type_config import *
 
+
 class CategoryCallback(CallbackData, prefix="cat"):
     id: int
 
@@ -50,7 +51,7 @@ set_edit_training_kb = InlineKeyboardMarkup(inline_keyboard=[
 
 
 continue_set_adding_kb = InlineKeyboardMarkup(inline_keyboard=[
-    [InlineKeyboardButton(text="Yes", callback_data="add_set_in_edit_mode"), InlineKeyboardButton(text="No", callback_data="back_to_categories")]
+    [InlineKeyboardButton(text="Yes", callback_data="add_set_to_existing_ex"), InlineKeyboardButton(text="No", callback_data="back_to_categories")]
 ])
 
 
@@ -157,26 +158,24 @@ def create_paginated_training_kb(items: list[dict], page: int,
             InlineKeyboardButton(text=f"🗑 Delete #{t_id}", callback_data=TrainingActionCallback(action="delete", id=t_id).pack())
         )
 
-        nav_row = []
+    nav_row = []
 
-        if has_prev:
-            nav_row.append(
-                InlineKeyboardButton(text="⬅️", callback_data=TrainingPagCallback(page=page - 1).pack())
-            )
-        else:
-            nav_row.append(InlineKeyboardButton(text=" ", callback_data="pap_noop"))
+    if has_prev:
         nav_row.append(
-            InlineKeyboardButton(
-                text=f"📄 {page} / {total_pages}", callback_data="pag_noop"
-            )
+            InlineKeyboardButton(text="⬅️", callback_data=TrainingPagCallback(page=page - 1).pack())
         )
-        if has_next:
-            nav_row.append(
-               InlineKeyboardButton(text="➡️", callback_data=TrainingPagCallback(page=page + 1).pack())
-            )
-        else:
-            nav_row.append(InlineKeyboardButton(text=" ", callback_data="pap_noop"))
-
-        builder.row(*nav_row)
-
-        return builder.as_markup()
+    else:
+        nav_row.append(InlineKeyboardButton(text=" ", callback_data="pap_noop"))
+    nav_row.append(
+        InlineKeyboardButton(
+            text=f"📄 {page} / {total_pages}", callback_data="pag_noop"
+        )
+        )
+    if has_next:
+        nav_row.append(
+            InlineKeyboardButton(text="➡️", callback_data=TrainingPagCallback(page=page + 1).pack())
+        )
+    else:
+        nav_row.append(InlineKeyboardButton(text=" ", callback_data="pap_noop"))
+    builder.row(*nav_row)
+    return builder.as_markup()
