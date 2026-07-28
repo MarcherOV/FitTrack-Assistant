@@ -62,6 +62,15 @@ continue_set_adding_edit_mode_kb = InlineKeyboardMarkup(inline_keyboard=[
     ]
 ])
 
+date_choice_kb = InlineKeyboardMarkup(inline_keyboard=[
+    [InlineKeyboardButton(text="🕒 Today (Now)", callback_data="date_now")],
+    [InlineKeyboardButton(text="❌ Cancel", callback_data="end_training")]
+])
+
+duration_choice_kb = InlineKeyboardMarkup(inline_keyboard=[
+    [InlineKeyboardButton(text="⏩ Specify at the end (0 min)", callback_data="duration_skip")],
+    [InlineKeyboardButton(text="❌ Cancel", callback_data="end_training")]
+])
 
 def create_categories_kb(categories: list):
     keyboard = InlineKeyboardBuilder()
