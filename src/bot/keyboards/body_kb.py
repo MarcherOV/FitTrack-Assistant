@@ -94,6 +94,7 @@ def create_edit_body_choice_kb():
     keyboard = InlineKeyboardBuilder()
     keyboard.add(InlineKeyboardButton(text="⚖️ Edit Weight", callback_data="edit_body_weight"))
     keyboard.add(InlineKeyboardButton(text="📏 Edit Measurements", callback_data="edit_body_measures"))
+    keyboard.add(InlineKeyboardButton(text="📅 Edit the date", callback_data="edit_body_date"))
     keyboard.add(InlineKeyboardButton(text="❌ Cancel", callback_data="cancel_edit"))
     return keyboard.adjust(1).as_markup()
 

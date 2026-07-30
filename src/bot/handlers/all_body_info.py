@@ -12,6 +12,7 @@ from src.bot.keyboards.body_kb import (
     create_edit_body_choice_kb, create_measurements_to_edit_kb,
     create_paginated_body_kb)
 from src.bot.keyboards.start_kb import start_kb
+from src.exceptions.future_error import FutureDateError
 
 router = Router()
 
@@ -20,6 +21,7 @@ logger = logging.getLogger(__name__)
 class EditBodyInfoFSM(StatesGroup):
     choose_what_to_edit = State()
     waiting_for_new_weight = State()
+    waiting_for_date = State()
     menu_measurements_to_edit = State()
     waiting_for_part_value_to_edit = State()
 
@@ -139,6 +141,37 @@ async def start_editing_body_info(callback: CallbackQuery, callback_data: BodyIn
     )
     await callback.answer()
 
+@router.callback_query(F.data == "edit_body_date")
+async def ask_new_date(callback: CallbackQuery, state: FSMContext):
+    await state.set_state(EditBodyInfoFSM.waiting_for_date)
+    await callback.message.edit_text("📅 Enter a new body info date in the format `DD.MM.YYYY` (for example, `28.07.2026`):")
+
+@router.message(EditBodyInfoFSM.waiting_for_date)
+async def process_new_date(message: Message, state: FSMContext, api_client: APIClient):
+    try:
+        dt = datetime.strptime(message.text.strip(), "%d.%m.%Y")
+        now = datetime.now()
+        if dt <= now:
+            dt = dt.replace(hour=now.hour, minute=now.minute, second=0)
+            data = await state.get_data()
+            body_info_id = data.get("editing_body_info_id")
+            payload = {"date": dt.isoformat()}
+            await api_client.patch(f"/body-info/{body_info_id}", json_data=payload)
+            await state.clear()
+            await message.answer(
+                        f"✅ **Success!** The body info date has been changed to **{dt}**.\nClick *See all my trainings* to view the updated list.",
+                        reply_markup=start_kb
+                    )
+        else:
+            raise FutureDateError
+            
+    except ValueError:
+        await message.answer("⚠️ Incorrect format! Enter the date as `DD.MM.YYYY` (for example, 28.07.2026) or click the button.")
+    except FutureDateError:
+        await message.answer("⚠️ Please enter a date that is no later than today's date")
+    except HTTPStatusError as e:
+        logger.exception(f"Error patching duration: {e}")
+        await message.answer("❌ Error updating the workout on the server.")
 
 @router.callback_query(F.data == "edit_body_weight")
 async def ask_for_new_weight(callback: CallbackQuery, state: FSMContext):
