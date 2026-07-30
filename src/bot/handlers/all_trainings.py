@@ -18,13 +18,16 @@ from src.bot.keyboards.training_kb import (
 )
 from src.bot.services.exercise_type_config import EXERCISE_TYPE_CONFIG
 from src.bot.services.set_collector import handle_ask_next_field, handle_process_universal_field_input
+from src.exceptions.future_error import FutureDateError
 
 logger = logging.getLogger(__name__)
+
 router = Router()
 
 class EditTrainingFSM(StatesGroup):
     choose_what_to_edit = State()
     waiting_for_duration = State()
+    waiting_for_date = State()
     choosing_exercise_to_edit = State()
     choosing_set_to_edit = State()
     add_new_exercise = State()
@@ -127,6 +130,37 @@ async def start_editing_training(callback: CallbackQuery, callback_data: Trainin
     )
     await callback.answer()
 
+@router.callback_query(F.data == "tr_edit_date", EditTrainingFSM.choose_what_to_edit)
+async def ask_new_date(callback: CallbackQuery, state: FSMContext):
+    await state.set_state(EditTrainingFSM.waiting_for_date)
+    await callback.message.edit_text("📅 Enter a new workout date in the format `DD.MM.YYYY` (for example, `28.07.2026`):")
+
+@router.message(EditTrainingFSM.waiting_for_date)
+async def process_new_date(message: Message, state: FSMContext, api_client: APIClient):
+    try:
+        dt = datetime.strptime(message.text.strip(), "%d.%m.%Y")
+        now = datetime.now()
+        if dt <= now:
+            dt = dt.replace(hour=now.hour, minute=now.minute, second=0)
+            data = await state.get_data()
+            training_id = data.get("editing_training_id")
+            payload = {"date": dt.isoformat()}
+            await api_client.patch(f"/trainings/{training_id}", json_data=payload)
+            await state.clear()
+            await message.answer(
+                        f"✅ **Success!** The workout date has been changed to **{dt}**.\nClick *See all my trainings* to view the updated list.",
+                        reply_markup=start_kb
+                    )
+        else:
+            raise FutureDateError
+            
+    except ValueError:
+        await message.answer("⚠️ Incorrect format! Enter the date as `DD.MM.YYYY` (for example, 28.07.2026) or click the button.")
+    except FutureDateError:
+        await message.answer("⚠️ Please enter a date that is no later than today's date")
+    except HTTPStatusError as e:
+        logger.exception(f"Error patching duration: {e}")
+        await message.answer("❌ Error updating the workout on the server.")
 
 @router.callback_query(F.data == "tr_edit_duration", EditTrainingFSM.choose_what_to_edit)
 async def ask_new_duration(callback: CallbackQuery, state: FSMContext):

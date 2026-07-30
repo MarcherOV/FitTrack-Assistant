@@ -105,6 +105,7 @@ def create_training_action_kb(training_id: int):
 
 def create_edit_training_choice_kb():
     keyboard = InlineKeyboardBuilder()
+    keyboard.add(InlineKeyboardButton(text="📅 Change the date", callback_data="tr_edit_date"))
     keyboard.add(InlineKeyboardButton(text="⏱ Change the duration", callback_data="tr_edit_duration"))
     keyboard.add(InlineKeyboardButton(text="🏋️ Edit exercises/sets", callback_data="tr_edit_sets"))
     keyboard.add(InlineKeyboardButton(text="❌ Cancel", callback_data="cancel_tr_edit"))
