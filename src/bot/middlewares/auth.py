@@ -24,9 +24,13 @@ class UserAuthMiddleware(BaseMiddleware):
                 "APIClient was not found in the dictionary! Check the order in which the middleware was registered."
             )
             return await handler(event, data)
-        
+
+        request_headers = {
+            "X-Telegram-Id": str(tg_user.id)
+        }
+
         try:
-            user_data = await api_client.get(f"/users/{tg_user.id}")
+            user_data = await api_client.get(f"/users/{tg_user.id}", headers=request_headers)
 
         except HTTPStatusError as e:
             if e.response.status_code == 404:
@@ -38,7 +42,7 @@ class UserAuthMiddleware(BaseMiddleware):
                     "telegram_id": tg_user.id,
                     "username": tg_user.username
                 }
-                user_data = await api_client.post("/users/", json_data=payload)
+                user_data = await api_client.post("/users/", json_data=payload, headers=request_headers)
             else:
                 logging.error(
                     f"User authorization error: {e}"

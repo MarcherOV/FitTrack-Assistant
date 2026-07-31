@@ -60,8 +60,13 @@ def format_trainings_page(items: list[dict], page: int, total_pages: int) -> str
 @router.message(F.text == "See all my trainings")
 async def see_all_trainings(message: Message, api_client: APIClient, db_user: dict):
     user_id = db_user.get("id")
+    telegram_id = message.from_user.id
+        
+    request_headers = {
+        "X-Telegram-Id": str(telegram_id)
+    }
     try:
-        data = await api_client.get(f"/users/{user_id}/trainings/?page=1&page_size=3")
+        data = await api_client.get(f"/users/{user_id}/trainings/?page=1&page_size=3", headers=request_headers)
         items = data.get("items", [])
         if not items:
             return await message.answer("🤷‍♂️ You don't have any saved workouts yet.")
@@ -84,8 +89,12 @@ async def process_training_pagination(
     api_client: APIClient, db_user: dict):
     user_id = db_user.get("id")
     target_page = callback_data.page
+    telegram_id = callback.from_user.id  
+    request_headers = {
+        "X-Telegram-Id": str(telegram_id)
+    }
     try:
-        data = await api_client.get(f"/users/{user_id}/trainings/?page={target_page}&page_size=3")
+        data = await api_client.get(f"/users/{user_id}/trainings/?page={target_page}&page_size=3", headers=request_headers)
         items = data.get("items", [])
         text = format_trainings_page(items=items, page=data["page"], total_pages=data["total_pages"])
         kb = create_paginated_training_kb(

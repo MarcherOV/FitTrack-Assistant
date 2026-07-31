@@ -15,15 +15,16 @@ class APIClient:
                                          headers={
                                              "Content-Type": "application/json",
                                              "Accept": "application/json",
-                                             "X-Bot-Secret": secret_token
+                                             "X-Bot-Token": secret_token
                                          },
                                          verify=certifi.where())
         
     async def _request(self, method: str, endpoint: str, params: Optional[Dict[str, Any]] = None,
-                       json_data: Optional[Dict[str, Any]] = None) -> Any:
+                       json_data: Optional[Dict[str, Any]] = None,
+                       headers: Optional[Dict[str, str]] = None) -> Any:
         url = f"/{endpoint.lstrip('/')}"
         try:
-            response = await self._client.request(method=method, url=url, params=params, json=json_data)
+            response = await self._client.request(method=method, url=url, params=params, json=json_data, headers=headers)
             response.raise_for_status()
             
             if response.status_code == 204:
@@ -48,19 +49,19 @@ class APIClient:
             )
             raise
 
-    async def get(self, endpoint: str, params: Optional[Dict[str, Any]] = None,) -> Any:
-        return await self._request("GET", endpoint, params)
+    async def get(self, endpoint: str, params: Optional[Dict[str, Any]] = None, headers: Optional[Dict[str, str]] = None) -> Any:
+        return await self._request("GET", endpoint, params, headers=headers)
     
     async def post(self, endpoint: str, params: Optional[Dict[str, Any]] = None,
-                       json_data: Optional[Dict[str, Any]] = None) -> Any:
-        return await self._request("POST", endpoint, params, json_data)
+                       json_data: Optional[Dict[str, Any]] = None, headers: Optional[Dict[str, str]] = None) -> Any:
+        return await self._request("POST", endpoint, params, json_data, headers=headers)
     
     async def patch(self, endpoint: str, params: Optional[Dict[str, Any]] = None,
-                       json_data: Optional[Dict[str, Any]] = None) -> Any:
-        return await self._request("PATCH", endpoint, params, json_data)
+                       json_data: Optional[Dict[str, Any]] = None, headers: Optional[Dict[str, str]] = None) -> Any:
+        return await self._request("PATCH", endpoint, params, json_data, headers=headers)
     
-    async def delete(self, endpoint: str, params: Optional[Dict[str, Any]] = None) -> Any:
-        return await self._request("DELETE", endpoint)
+    async def delete(self, endpoint: str, params: Optional[Dict[str, Any]] = None, headers: Optional[Dict[str, str]] = None) -> Any:
+        return await self._request("DELETE", endpoint, headers=headers)
     
     async def close(self) -> None:
         await self._client.aclose()
