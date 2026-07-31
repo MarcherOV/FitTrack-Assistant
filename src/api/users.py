@@ -6,6 +6,8 @@ from src. schemas.training import TrainingGET
 from src.repositories.users import UserRepository
 from src.repositories.training import TrainingRepository
 from src.pagination.pagination import PaginatedResponse
+from src.api.dependencies import get_current_user
+from src.models.users import User
 from math import ceil
 router = APIRouter(prefix="/users", tags=["Users"])
 
@@ -27,11 +29,14 @@ async def get_user_by_telegram_id(telegram_id: int, session: AsyncSession = Depe
 @router.get("/{user_id}/trainings/", response_model=PaginatedResponse[TrainingGET], status_code=status.HTTP_200_OK)
 async def get_all_user_trainings(user_id: int, session: AsyncSession = Depends(get_session),
                                  page: int = Query(1, ge=1, description="Page number"),
-                                 page_size: int = Query(5, ge=1, le=50, description="Number of entries on the page")):
-    user = await UserRepository.get_user(session, user_id)
-    if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-    trainings, total = (await TrainingRepository.get_training_by_user_id(session=session, user_id=user_id, page=page, page_size=page_size))
+                                 page_size: int = Query(5, ge=1, le=50, description="Number of entries on the page"),
+                                 current_user: User = Depends(get_current_user)):
+    if current_user.id != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You don't have permission to view these trainings"
+        )
+    trainings, total = (await TrainingRepository.get_training_by_user_id(session=session, user_id=current_user.id, page=page, page_size=page_size))
     total_pages = ceil(total / page_size) if total > 0 else 0
     has_next = page < total_pages
     has_previous = page > 1 and page <= total_pages + 1

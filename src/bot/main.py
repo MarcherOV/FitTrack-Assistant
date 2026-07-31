@@ -21,7 +21,7 @@ async def main():
     bot = Bot(TELEGRAM_TOKEN)
     db = Dispatcher()
 
-    api_client = APIClient(base_url="http://127.0.0.1:8000/", secret_token="")
+    api_client = APIClient(base_url="http://127.0.0.1:8000/", secret_token=TELEGRAM_TOKEN)
 
     db.update.outer_middleware(APIClientMiddleware(api_client))
     db.update.outer_middleware(UserAuthMiddleware())

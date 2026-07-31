@@ -2,3 +2,9 @@
 .env
 alembic/versions
 __pycache__
+node_modules
+dist
+dist-ssr
+*.local
+.env
+.DS_Store
