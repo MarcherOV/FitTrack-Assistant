@@ -5,34 +5,66 @@ import {
   Radar,
   RadarChart,
   ResponsiveContainer,
+  Tooltip,
 } from 'recharts'
 import { Ruler } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import Card from './Card'
 
-// Людські підписи для ключів замірів, що можуть прийти з бекенду
 const LABELS = {
-  chest: 'Груди',
-  biceps: 'Біцепс',
-  waist: 'Талія',
-  hips: 'Стегна (обхват)',
-  thigh: 'Стегно',
-  calf: 'Гомілка',
-  shoulders: 'Плечі',
-  neck: 'Шия',
+  chest: 'Chest',
+  biceps: 'Biceps',
+  waist: 'Waist',
+  hips: 'Hips',
+  thigh: 'Thigh',
+  calf: 'Calf',
+  shoulders: 'Shoulders',
+  neck: 'Neck',
 }
 
 function labelFor(key) {
   return LABELS[key] || key.charAt(0).toUpperCase() + key.slice(1)
 }
 
-export default function MeasurementsRadar({ measurements }) {
-  // Знаходимо останній (найсвіжіший) запис, у якого є хоч якісь заміри
-  const latestWithMeasurements = useMemo(() => {
-    const withData = (measurements || []).filter((m) => m.measurements?.length)
-    if (!withData.length) return null
+const CustomRenderLabel = ({ x, y, value }) => {
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <rect
+        x="-14"
+        y="-8"
+        width="28"
+        height="16"
+        rx="4"
+        fill="var(--tg-theme-bg-color, #ffffff)"
+        fillOpacity="0.85"
+      />
+      <text
+        x="0"
+        y="3"
+        fill="#7c5cff"
+        fontSize="11"
+        fontWeight="bold"
+        textAnchor="middle"
+      >
+        {value}
+      </text>
+    </g>
+  )
+}
 
-    return [...withData].sort(
+export default function MeasurementsRadar({ measurements }) {
+  const latestWithMeasurements = useMemo(() => {
+    const withEnoughData = (measurements || []).filter((m) => {
+      if (!m.measurements) return false;
+      const totalMetrics = m.measurements.reduce((acc, entry) => {
+        return acc + Object.keys(entry.measurements || {}).length;
+      }, 0);
+      return totalMetrics >= 3;
+    });
+
+    if (!withEnoughData.length) return null;
+
+    return [...withEnoughData].sort(
       (a, b) => parseISO(b.date).getTime() - parseISO(a.date).getTime()
     )[0]
   }, [measurements])
@@ -40,8 +72,6 @@ export default function MeasurementsRadar({ measurements }) {
   const radarData = useMemo(() => {
     if (!latestWithMeasurements) return []
 
-    // measurements — масив об'єктів виду { measurements: { chest: 55, ... } }
-    // Зливаємо всі вкладені виміри в один плаский набір показник -> значення
     const merged = latestWithMeasurements.measurements.reduce((acc, entry) => {
       return { ...acc, ...(entry.measurements || {}) }
     }, {})
@@ -54,7 +84,7 @@ export default function MeasurementsRadar({ measurements }) {
 
   return (
     <Card
-      title="Заміри тіла"
+      title="Body Measurements"
       icon={Ruler}
       action={
         latestWithMeasurements && (
@@ -66,23 +96,36 @@ export default function MeasurementsRadar({ measurements }) {
     >
       {radarData.length === 0 ? (
         <p className="text-tg-hint text-sm py-6 text-center">
-          Немає детальних замірів (обхватів) для побудови діаграми.
+          No detailed measurements (circumferences) available for chart construction.
         </p>
       ) : (
         <div className="h-56">
           <ResponsiveContainer width="100%" height="100%">
-            <RadarChart data={radarData} outerRadius="75%">
-              <PolarGrid stroke="rgba(255,255,255,0.1)" />
+            <RadarChart data={radarData} outerRadius="65%">
+              <PolarGrid stroke="rgba(139, 147, 161, 0.2)" />
               <PolarAngleAxis
                 dataKey="metric"
                 tick={{ fill: 'var(--tg-theme-hint-color, #8b93a1)', fontSize: 11 }}
               />
+              <Tooltip
+                formatter={(value) => [`${value} см`, 'Обхват']}
+                contentStyle={{
+                  backgroundColor: 'var(--tg-theme-bg-color, #ffffff)',
+                  borderRadius: '8px',
+                  border: 'none',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                  color: 'var(--tg-theme-text-color, #000000)'
+                }}
+                itemStyle={{ color: '#7c5cff', fontWeight: 'bold' }}
+              />
               <Radar
+                name="Measurements"
                 dataKey="value"
                 stroke="#7c5cff"
                 fill="#7c5cff"
                 fillOpacity={0.35}
                 strokeWidth={2}
+                label={<CustomRenderLabel />}
               />
             </RadarChart>
           </ResponsiveContainer>

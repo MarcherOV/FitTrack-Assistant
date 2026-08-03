@@ -1,27 +1,41 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Header from './components/Header'
 import WeightChart from './components/WeightChart'
 import TrainingsList from './components/TrainingsList'
 import MeasurementsRadar from './components/MeasurementsRadar'
+import ProgressSummary from './components/ProgressSummary'
+import StrengthProgressChart from './components/StrengthProgressChart'
+import PersonalRecords from './components/PersonalRecords'
+import TrainingHeatmap from './components/TrainingHeatmap'
+import WeeklyVolumeChart from './components/WeeklyVolumeChart'
+import MuscleGroupChart from './components/MuscleGroupChart'
 import { LoadingScreen, ErrorScreen } from './components/StatusScreen'
+import TelegramLoginScreen from './components/TelegramLoginScreen'
 import { useAuth } from './hooks/useAuth'
-import { fetchTrainings } from './api/trainings'
-import { fetchMeasurements } from './api/measurements'
+import { fetchTrainings, fetchAllTrainings } from './api/trainings'
+import { fetchMeasurements, fetchAllMeasurements } from './api/measurements'
+import { fetchCategories } from './api/categories'
+import { buildExerciseHistory, buildPersonalRecords, calculateStreak } from './utils/calculations'
 
 export default function App() {
-  const { status: authStatus, error: authError, user, dbUserId } = useAuth()
+  const { status: authStatus, error: authError, user, dbUserId, loginWithWidget } = useAuth()
 
   const [dataStatus, setDataStatus] = useState('idle') // idle | loading | success | error
   const [dataError, setDataError] = useState(null)
+
   const [trainings, setTrainings] = useState([])
   const [measurements, setMeasurements] = useState([])
 
-  const userId = user?.id
+  const [allTrainings, setAllTrainings] = useState([])
+  const [allMeasurements, setAllMeasurements] = useState([])
+  const [historyStatus, setHistoryStatus] = useState('idle') // idle | loading | success | error
+
+  const [categoriesMap, setCategoriesMap] = useState(new Map())
 
   async function loadDashboardData() {
     if (!dbUserId) {
       setDataStatus('error')
-      setDataError('Не вдалося визначити внутрішній ID користувача в базі даних.')
+      setDataError('The users internal ID could not be found in the database.')
       return
     }
 
@@ -45,15 +59,55 @@ export default function App() {
     }
   }
 
+  async function loadHistoryData() {
+    if (!dbUserId) return
+
+    setHistoryStatus('loading')
+    try {
+      const [trainingsHistory, measurementsHistory] = await Promise.all([
+        fetchAllTrainings(dbUserId, { pageSize: 50 }),
+        fetchAllMeasurements(dbUserId, { pageSize: 50 }),
+      ])
+      setAllTrainings(trainingsHistory)
+      setAllMeasurements(measurementsHistory)
+      setHistoryStatus('success')
+    } catch (err) {
+      setHistoryStatus('error')
+    }
+  }
+
+  async function loadCategories() {
+    try {
+      const categories = await fetchCategories()
+      setCategoriesMap(new Map((categories || []).map((c) => [c.id, c.name])))
+    } catch (err) {
+    }
+  }
+
   useEffect(() => {
     if (authStatus === 'success') {
       loadDashboardData()
+      loadHistoryData()
+      loadCategories()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authStatus, dbUserId])
+
+  const personalRecords = useMemo(() => {
+    const historyMap = buildExerciseHistory(allTrainings)
+    return buildPersonalRecords(historyMap)
+  }, [allTrainings])
+
+  const streak = useMemo(() => calculateStreak(allTrainings.length ? allTrainings : trainings), [
+    allTrainings,
+    trainings,
+  ])
 
   if (authStatus === 'loading') {
     return <LoadingScreen label="Авторизація через Telegram…" />
+  }
+
+  if (authStatus === 'widget-required') {
+    return <TelegramLoginScreen onAuth={loginWithWidget} />
   }
 
   if (authStatus === 'error') {
@@ -68,14 +122,35 @@ export default function App() {
     return <ErrorScreen message={dataError} onRetry={loadDashboardData} />
   }
 
+  // Для графіків, що потребують повної історії, використовуємо allTrainings,
+  // поки вона ще вантажиться — падаємо назад на короткий список last-5.
+  const trainingsForCharts = allTrainings.length ? allTrainings : trainings
+  const measurementsForCharts = allMeasurements.length ? allMeasurements : measurements
+
   return (
     <div className="min-h-screen bg-tg-bg pb-8">
-      <Header user={user} />
+      <Header user={user} streak={streak} />
 
       <main className="px-4 flex flex-col gap-4 mt-2">
-        <WeightChart measurements={measurements} />
-        <MeasurementsRadar measurements={measurements} />
+        <ProgressSummary trainings={trainingsForCharts} personalRecords={personalRecords} />
+
+        <WeightChart measurements={measurementsForCharts} />
+        <MeasurementsRadar measurements={measurementsForCharts} />
+
+        <StrengthProgressChart trainings={trainingsForCharts} />
+        <PersonalRecords trainings={trainingsForCharts} />
+
+        <TrainingHeatmap trainings={trainingsForCharts} />
+        <WeeklyVolumeChart trainings={trainingsForCharts} />
+        <MuscleGroupChart trainings={trainingsForCharts} categoriesMap={categoriesMap} />
+
         <TrainingsList trainings={trainings} />
+
+        {historyStatus === 'loading' && (
+          <p className="text-tg-hint text-[11px] text-center -mt-2">
+            Довантажуємо повну історію для графіків прогресу…
+          </p>
+        )}
       </main>
     </div>
   )

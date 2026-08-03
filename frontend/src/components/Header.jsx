@@ -2,14 +2,14 @@ import { Flame } from 'lucide-react'
 
 function getGreeting() {
   const hour = new Date().getHours()
-  if (hour < 5) return 'Доброї ночі'
-  if (hour < 12) return 'Доброго ранку'
-  if (hour < 18) return 'Доброго дня'
-  return 'Доброго вечора'
+  if (hour < 5) return 'Good night'
+  if (hour < 12) return 'Good morning'
+  if (hour < 18) return 'Good day'
+  return 'Good evening'
 }
 
-export default function Header({ user }) {
-  const firstName = user?.first_name || 'Атлет'
+export default function Header({ user, streak = 0 }) {
+  const firstName = user?.first_name || 'Athlete'
   const initial = firstName.charAt(0).toUpperCase()
 
   return (
@@ -20,10 +20,12 @@ export default function Header({ user }) {
       </div>
 
       <div className="flex items-center gap-2">
-        <div className="flex items-center gap-1 bg-brand-coral/10 text-brand-coral px-2.5 py-1 rounded-full text-xs font-semibold">
-          <Flame size={13} strokeWidth={2.5} />
-          <span>Активна серія</span>
-        </div>
+        {streak > 0 && (
+          <div className="flex items-center gap-1 bg-brand-coral/10 text-brand-coral px-2.5 py-1 rounded-full text-xs font-semibold">
+            <Flame size={13} strokeWidth={2.5} />
+            <span>{streak} {pluralizeDays(streak)}</span>
+          </div>
+        )}
         {user?.photo_url ? (
           <img
             src={user.photo_url}
@@ -38,4 +40,13 @@ export default function Header({ user }) {
       </div>
     </header>
   )
+}
+
+function pluralizeDays(count) {
+  const mod10 = count % 10
+  const mod100 = count % 100
+  if (mod100 >= 11 && mod100 <= 14) return 'days in a row'
+  if (mod10 === 1) return 'day in a row'
+  if (mod10 >= 2 && mod10 <= 4) return 'days in a row'
+  return 'days in a row'
 }

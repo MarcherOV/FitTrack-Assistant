@@ -1,41 +1,49 @@
 /**
- * Мінімальний парсер ISO 8601 Duration (напр. "P3D", "PT1H30M", "P1DT2H").
- * Бекенд віддає тривалість тренування саме в такому форматі.
+ * Парсить ISO 8601 duration-рядок (напр. "PT1H33M", "P3D", "PT45M30S")
+ * і повертає загальну кількість секунд.
+ * Повертає 0, якщо рядок не вдалось розпарсити.
  */
-export function parseIsoDuration(iso) {
-  if (!iso || typeof iso !== 'string') return null
+function parseIsoDuration(value) {
+  if (typeof value !== 'string') return 0
 
-  const match = iso.match(
-    /^P(?:(\d+)Y)?(?:(\d+)M)?(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?)?$/
+  const match = value.match(
+    /^P(?:(\d+(?:\.\d+)?)Y)?(?:(\d+(?:\.\d+)?)M)?(?:(\d+(?:\.\d+)?)W)?(?:(\d+(?:\.\d+)?)D)?(?:T(?:(\d+(?:\.\d+)?)H)?(?:(\d+(?:\.\d+)?)M)?(?:(\d+(?:\.\d+)?)S)?)?$/
   )
-  if (!match) return null
+  if (!match) return 0
 
-  const [, years, months, days, hours, minutes, seconds] = match
+  const [, years, months, weeks, days, hours, minutes, seconds] = match.map((v) =>
+    v ? parseFloat(v) : 0
+  )
 
-  return {
-    years: Number(years || 0),
-    months: Number(months || 0),
-    days: Number(days || 0),
-    hours: Number(hours || 0),
-    minutes: Number(minutes || 0),
-    seconds: Number(seconds || 0),
-  }
+  return (
+    years * 365 * 24 * 3600 +
+    months * 30 * 24 * 3600 +
+    weeks * 7 * 24 * 3600 +
+    days * 24 * 3600 +
+    hours * 3600 +
+    minutes * 60 +
+    seconds
+  )
 }
 
 /**
- * Форматує ISO Duration у людський короткий рядок, напр. "3 дні", "1 год 30 хв".
+ * Форматує тривалість у вигляд "1 год 20 хв" / "45 хв".
+ * Приймає або кількість секунд (число), або ISO 8601 duration-рядок
+ * (як повертає бекенд, напр. "PT1H33M").
+ * @param {number|string} durationValue
  */
-export function formatDuration(iso) {
-  const d = parseIsoDuration(iso)
-  if (!d) return '—'
+export function formatDuration(durationValue) {
+  const seconds =
+    typeof durationValue === 'string' ? parseIsoDuration(durationValue) : Number(durationValue) || 0
 
-  const parts = []
-  if (d.years) parts.push(`${d.years} р.`)
-  if (d.months) parts.push(`${d.months} міс.`)
-  if (d.days) parts.push(`${d.days} дн.`)
-  if (d.hours) parts.push(`${d.hours} год`)
-  if (d.minutes) parts.push(`${d.minutes} хв`)
-  if (d.seconds) parts.push(`${d.seconds} с`)
+  if (!seconds || seconds <= 0) return '—'
 
-  return parts.length ? parts.join(' ') : '0 хв'
+  const totalMinutes = Math.round(seconds / 60)
+  const hours = Math.floor(totalMinutes / 60)
+  const minutes = totalMinutes % 60
+
+  if (hours > 0) {
+    return minutes > 0 ? `${hours} hours ${minutes} mins` : `${hours} hours`
+  }
+  return `${minutes} mins`
 }

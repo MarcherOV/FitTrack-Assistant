@@ -19,7 +19,6 @@ body {
   overscroll-behavior-y: none;
 }
 
-/* Легкий кастомний скролбар для веб-перегляду (в самому Telegram він прихований) */
 ::-webkit-scrollbar {
   width: 4px;
 }

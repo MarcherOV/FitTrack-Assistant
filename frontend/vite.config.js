@@ -9,5 +9,11 @@ export default defineConfig({
     allowedHosts: [
       'property-nemeses-encroach.ngrok-free.dev'
     ],
+    proxy: {
+      '/api': 'http://127.0.0.1:8000',
+      '/users': 'http://127.0.0.1:8000',
+      '/categories': 'http://127.0.0.1:8000',
+      '/body-info': 'http://127.0.0.1:8000',
+    },
   }
 })

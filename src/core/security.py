@@ -47,6 +47,13 @@ def verify_telegram_web_app_data(init_data: str, bot_token: str) -> dict | None:
     except Exception:
         return None
 
+def verify_widget_hash(data: dict, bot_token: str) -> bool:
+    received_hash = data.pop("hash")
+    check_string = "\n".join(f"{k}={v}" for k, v in sorted(data.items()))
+    secret_key = hashlib.sha256(bot_token.encode()).digest()
+    calculated_hash = hmac.new(secret_key, check_string.encode(), hashlib.sha256).hexdigest()
+    return calculated_hash == received_hash
+
 def create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:
     """Generate JWT token"""
     to_encode = data.copy()

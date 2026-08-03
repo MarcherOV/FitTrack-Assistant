@@ -27,14 +27,14 @@ function TrainingItem({ training }) {
             key={ex.id}
             className="bg-tg-bg/60 border border-white/5 text-tg-text text-xs px-2.5 py-1 rounded-full"
           >
-            {ex.exercise?.name || 'Вправа'}:{' '}
+            {ex.exercise?.name || 'Exercise'}:{' '}
             <span className="text-tg-hint">
               {ex.sets?.length || 0} {pluralizeSets(ex.sets?.length || 0)}
             </span>
           </span>
         ))}
         {!training.exercises?.length && (
-          <span className="text-tg-hint text-xs">Немає вправ у записі</span>
+          <span className="text-tg-hint text-xs">There are no exercises in the recording</span>
         )}
       </div>
     </div>
@@ -42,21 +42,20 @@ function TrainingItem({ training }) {
 }
 
 function pluralizeSets(count) {
-  // просте українське відмінювання слова "підхід"
   const mod10 = count % 10
   const mod100 = count % 100
-  if (mod100 >= 11 && mod100 <= 14) return 'підходів'
-  if (mod10 === 1) return 'підхід'
-  if (mod10 >= 2 && mod10 <= 4) return 'підходи'
-  return 'підходів'
+  if (mod100 >= 11 && mod100 <= 14) return 'sets'
+  if (mod10 === 1) return 'set'
+  if (mod10 >= 2 && mod10 <= 4) return 'sets'
+  return 'sets'
 }
 
 export default function TrainingsList({ trainings }) {
   return (
-    <Card title="Останні тренування" icon={Dumbbell}>
+    <Card title="Recent Trainings" icon={Dumbbell}>
       {!trainings?.length ? (
         <p className="text-tg-hint text-sm py-6 text-center">
-          Тренувань поки немає. Час почати! 💪
+          No trainings yet. Time to get started! 💪
         </p>
       ) : (
         <div>
