@@ -1,51 +1,74 @@
-import { useEffect, useState } from 'react'
-import { authWithTelegram } from '../api/auth'
+import { useCallback, useEffect, useState } from 'react'
+import { authWithTelegram, authWithTelegramWidget } from '../api/auth'
 import { getToken } from '../api/client'
 import { useTelegram } from './useTelegram'
 
 /**
- * Керує процесом авторизації: якщо валідного токена ще немає,
- * бере initData з Telegram SDK і обмінює його на JWT.
+ * Керує процесом авторизації.
+ *
+ * status:
+ *  - 'loading'        — ще визначаємось
+ *  - 'success'        — авторизовані, є dbUserId
+ *  - 'widget-required' — немає initData (звичайний браузер поза Telegram),
+ *                         потрібно показати Telegram Login Widget
+ *  - 'error'          — авторизація впала (напр. Telegram Mini App без initData,
+ *                         або помилка бекенду)
  */
 export function useAuth() {
-  const { isReady, initData, user } = useTelegram()
+  const { isReady, initData, user: tgUser } = useTelegram()
   const [status, setStatus] = useState('loading')
   const [error, setError] = useState(null)
-  const [dbUserId, setDbUserId] = useState(null) // <-- ОСЬ ЦЬОГО РЯДКА НЕ ВИСТАЧАЛО
+  const [dbUserId, setDbUserId] = useState(null)
+  const [widgetUser, setWidgetUser] = useState(null)
 
   useEffect(() => {
     if (!isReady) return
 
-    // Якщо токен вже є (наприклад, з попередньої сесії) — дістаємо збережений ID
     if (getToken()) {
       const savedUserId = localStorage.getItem('db_user_id')
       if (savedUserId && savedUserId !== 'undefined') {
         setDbUserId(Number(savedUserId))
         setStatus('success')
         return
-      } else {
-        localStorage.removeItem('token')
       }
+      localStorage.removeItem('fitness_jwt_token')
     }
 
-    if (!initData) {
-      setStatus('error')
-      setError(
-        'Не вдалося отримати initData. Відкрийте додаток через Telegram, а не напряму в браузері.'
-      )
+    if (initData) {
+      authWithTelegram(initData)
+        .then((data) => {
+          setDbUserId(data.user_id)
+          setStatus('success')
+        })
+        .catch((err) => {
+          setStatus('error')
+          setError(err?.response?.data?.detail || err.message || 'Помилка авторизації')
+        })
       return
     }
 
-    authWithTelegram(initData)
+    setStatus('widget-required')
+  }, [isReady, initData])
+
+  const loginWithWidget = useCallback((telegramUser) => {
+    setWidgetUser(telegramUser)
+    setStatus('loading')
+    setError(null)
+
+    authWithTelegramWidget(telegramUser)
       .then((data) => {
-        setDbUserId(data.user_id) // Тепер змінна існує і метод спрацює успішно
+        setDbUserId(data.user_id)
         setStatus('success')
       })
       .catch((err) => {
         setStatus('error')
-        setError(err?.response?.data?.detail || err.message || 'Помилка авторизації')
+        setError(
+          err?.response?.data?.detail || err.message || 'Помилка авторизації через Telegram'
+        )
       })
-  }, [isReady, initData])
+  }, [])
 
-  return { status, error, user, dbUserId }
+  const user = tgUser || widgetUser
+
+  return { status, error, user, dbUserId, loginWithWidget }
 }

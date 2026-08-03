@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.schemas.users import UserPOST
 from src.schemas.auth import TelegramAuthRequest, TokenResponse
-from src.core.security import verify_telegram_web_app_data, create_access_token
+from src.core.security import verify_telegram_web_app_data, create_access_token, verify_widget_hash
 from src.core import config
 from src.db.database import get_session
 from src.core.config import ACCESS_TOKEN_EXPIRE_MINUTES
@@ -31,6 +31,37 @@ async def authenticate_via_telegram(
     
     if not db_user:
         user_data = UserPOST(telegram_id=telegram_id, username=telegram_user.get("username", None)) 
+        db_user = await UserRepository.create_user(
+            session=session,
+            user_data=user_data
+        )
+    
+    access_token_expires = timedelta(minutes=int(ACCESS_TOKEN_EXPIRE_MINUTES))
+    access_token = create_access_token(
+        data={"sub": str(db_user.id)},
+        expires_delta=access_token_expires
+    )
+    
+    return TokenResponse(access_token=access_token, user_id=db_user.id)
+
+@router.post("/telegram-widget", response_model=TokenResponse)
+async def authenticate_via_telegram_widget(
+    auth_data: dict,
+    session: AsyncSession = Depends(get_session)):
+
+    if not verify_widget_hash(auth_data, config.TELEGRAM_TOKEN):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate Telegram widget data",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    telegram_id = auth_data.get("id")
+    
+    db_user = await UserRepository.get_user_by_telegram_id(session=session, telegram_id=telegram_id)
+    
+    if not db_user:
+        user_data = UserPOST(telegram_id=telegram_id, username=auth_data.get("username", None)) 
         db_user = await UserRepository.create_user(
             session=session,
             user_data=user_data
