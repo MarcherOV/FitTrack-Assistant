@@ -1,8 +1,4 @@
-/**
- * Парсить ISO 8601 duration-рядок (напр. "PT1H33M", "P3D", "PT45M30S")
- * і повертає загальну кількість секунд.
- * Повертає 0, якщо рядок не вдалось розпарсити.
- */
+
 function parseIsoDuration(value) {
   if (typeof value !== 'string') return 0
 
@@ -27,9 +23,6 @@ function parseIsoDuration(value) {
 }
 
 /**
- * Форматує тривалість у вигляд "1 год 20 хв" / "45 хв".
- * Приймає або кількість секунд (число), або ISO 8601 duration-рядок
- * (як повертає бекенд, напр. "PT1H33M").
  * @param {number|string} durationValue
  */
 export function formatDuration(durationValue) {

@@ -1,21 +1,18 @@
 import { useEffect, useRef } from 'react'
 
-// Замініть на юзернейм вашого бота БЕЗ символу @
 const BOT_USERNAME = 'fitness1_tracker_bot'
 
 /**
- * Вбудовує офіційний Telegram Login Widget (script telegram-widget.js).
- * Після успішного логіну Telegram викликає глобальний callback з об'єктом
- * користувача {id, first_name, last_name, username, photo_url, auth_date, hash}.
+ * Integrates the official Telegram Login Widget (script telegram-widget.js).
+ * After a successful login, Telegram triggers a global callback with a
+ * user object {id, first_name, last_name, username, photo_url, auth_date, hash}.
  *
- * Документація: https://core.telegram.org/widgets/login
+ * Documentation: https://core.telegram.org/widgets/login
  */
 export default function TelegramLoginWidget({ onAuth }) {
   const containerRef = useRef(null)
 
   useEffect(() => {
-    // Глобальний callback, на який посилається сам скрипт віджета
-    // (data-onauth="onTelegramAuth(user)")
     window.onTelegramAuth = (user) => {
       onAuth(user)
     }

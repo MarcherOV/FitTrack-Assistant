@@ -1,6 +1,6 @@
 import { Dumbbell, Clock } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
-import { uk } from 'date-fns/locale'
+import { enUS } from 'date-fns/locale'
 import Card from './Card'
 import { formatDuration } from '../utils/duration'
 
@@ -13,7 +13,7 @@ function TrainingItem({ training }) {
 
       <div className="flex items-center justify-between mb-1.5">
         <span className="text-tg-text text-sm font-semibold capitalize">
-          {format(dateObj, 'd MMMM', { locale: uk })}
+          {format(dateObj, 'd MMMM', { locale: enUS })}
         </span>
         <span className="flex items-center gap-1 text-tg-hint text-xs">
           <Clock size={12} />

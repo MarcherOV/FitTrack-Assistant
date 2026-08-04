@@ -1,7 +1,7 @@
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import selectinload, with_loader_criteria
 from src.models.exercises import Exercise, Category, Type
 from src.schemas.exercises import ExercisePOST, ExerciseUPDATE, ExerciseGET, CategoryPOST, CategoryUPDATE, CategoryGET, TypePOST, TypeUPDATE, TypeGET
 
@@ -18,13 +18,23 @@ class ExerciseRepository:
         query = select(Exercise).where(Exercise.id == exercise_id)
         result = await session.execute(query)
         return result.scalar_one_or_none()
+
+    @staticmethod
+    async def get_exercises_by_category(session: AsyncSession, category_id: int, user_id: int) -> list[Exercise]:
+        query = select(Exercise).where(
+            Exercise.category_id == category_id,
+            or_(Exercise.user_id.is_(None), Exercise.user_id == user_id)
+        )
+        result = await session.execute(query)
+        return result.scalars().all()
     
     @staticmethod
-    async def create_exercise(session: AsyncSession, exercise_data: ExercisePOST) -> Exercise:
+    async def create_exercise(session: AsyncSession, exercise_data: ExercisePOST, user_id: int) -> Exercise:
         exercise = Exercise(
             name = exercise_data.name,
             category_id = exercise_data.category_id,
-            type_id = exercise_data.type_id
+            type_id = exercise_data.type_id,
+            user_id = user_id
         )
         session.add(exercise)
         try:
@@ -59,8 +69,18 @@ class CategoryRepository:
         return result.scalar_one_or_none()
     
     @staticmethod
-    async def get_category_with_exercises(session: AsyncSession, category_id: int) -> Category | None:
-        query = select(Category).where(Category.id == category_id).options(selectinload(Category.exercises))
+    async def get_category_with_exercises(session: AsyncSession, category_id: int, user_id: int) -> Category | None:
+        query = (
+            select(Category)
+            .where(Category.id == category_id)
+            .options(
+                selectinload(Category.exercises),
+                with_loader_criteria(
+                    Exercise, 
+                    or_(Exercise.user_id.is_(None), Exercise.user_id == user_id)
+                )
+            )
+        )
         result = await session.execute(query)
         return result.scalar_one_or_none()
     

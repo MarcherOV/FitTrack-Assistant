@@ -20,9 +20,9 @@ function CustomTooltip({ active, payload }) {
   return (
     <div className="bg-tg-secondary-bg border border-white/10 rounded-lg px-3 py-2 shadow-lg">
       <p className="text-tg-hint text-[10px] mb-1">{point.fullDate}</p>
-      <p className="text-tg-text text-sm font-bold">~{point.oneRm} кг · 1ПМ</p>
+      <p className="text-tg-text text-sm font-bold">~{point.oneRm} kg · 1RM</p>
       <p className="text-tg-hint text-xs">
-        {point.weight} кг × {point.reps} повт.
+        {point.weight} kg × {point.reps} reps
       </p>
     </div>
   )

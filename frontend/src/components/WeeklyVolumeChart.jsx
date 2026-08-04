@@ -12,7 +12,7 @@ function CustomTooltip({ active, payload, label }) {
     <div className="bg-tg-secondary-bg border border-white/10 rounded-lg px-3 py-2 shadow-lg">
       <p className="text-tg-hint text-[10px] mb-0.5">A week from {label}</p>
       <p className="text-tg-text text-sm font-bold">
-        {point.volume.toLocaleString('uk-UA')} кг
+        {point.volume.toLocaleString('uk-UA')} kg
       </p>
       <p className="text-tg-hint text-xs">{point.sessions} workouts</p>
     </div>

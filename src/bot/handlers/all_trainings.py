@@ -60,13 +60,10 @@ def format_trainings_page(items: list[dict], page: int, total_pages: int) -> str
 @router.message(F.text == "See all my trainings")
 async def see_all_trainings(message: Message, api_client: APIClient, db_user: dict):
     user_id = db_user.get("id")
-    telegram_id = message.from_user.id
-        
-    request_headers = {
-        "X-Telegram-Id": str(telegram_id)
-    }
+    telegram_id = db_user.get("telegram_id")
+    request_headers = {"X-Telegram-Id": str(telegram_id)}
     try:
-        data = await api_client.get(f"/users/{user_id}/trainings/?page=1&page_size=3", headers=request_headers)
+        data = await api_client.get(f"/users/{user_id}/trainings/", params={"page": 1, "page_size": 3}, headers=request_headers)
         items = data.get("items", [])
         if not items:
             return await message.answer("🤷‍♂️ You don't have any saved workouts yet.")
@@ -89,12 +86,10 @@ async def process_training_pagination(
     api_client: APIClient, db_user: dict):
     user_id = db_user.get("id")
     target_page = callback_data.page
-    telegram_id = callback.from_user.id  
-    request_headers = {
-        "X-Telegram-Id": str(telegram_id)
-    }
+    telegram_id = db_user.get("telegram_id")
+    request_headers = {"X-Telegram-Id": str(telegram_id)}
     try:
-        data = await api_client.get(f"/users/{user_id}/trainings/?page={target_page}&page_size=3", headers=request_headers)
+        data = await api_client.get(f"/users/{user_id}/trainings/", headers=request_headers, params={"page": target_page, "page_size": 3})
         items = data.get("items", [])
         text = format_trainings_page(items=items, page=data["page"], total_pages=data["total_pages"])
         kb = create_paginated_training_kb(
@@ -220,7 +215,8 @@ async def ask_to_choose_set_to_edit(callback: CallbackQuery, callback_data: Trai
         await state.update_data(
             exercise_name=callback_data.exercise_name,
             training_exercise_id=callback_data.id,
-            type_id=callback_data.type_id
+            type_id=callback_data.type_id,
+            next_set_number=len(set_data) + 1
         )
         await callback.message.edit_text(
             f"Choose which set to edit for {callback_data.exercise_name}",
@@ -257,7 +253,8 @@ async def start_editing_existing_set(callback: CallbackQuery, callback_data: Set
 async def start_adding_new_set_to_existing_ex(callback: CallbackQuery, api_client: APIClient, state: FSMContext):
     data = await state.get_data()
     fields_to_fill = EXERCISE_TYPE_CONFIG.get(data.get("type_id"), ["weight", "repetitions"]).copy()
-    await state.update_data(remaining_fields=fields_to_fill, action="add", current_set_payload={}, current_set_number = None)
+    next_set_num = data.get("next_set_number", 1)
+    await state.update_data(remaining_fields=fields_to_fill, action="add", current_set_payload={}, current_set_number=next_set_num)
     await callback.answer()
     await ask_next_field(callback.message, state, api_client)
 
@@ -291,9 +288,13 @@ async def start_adding_subsequent_set(callback: CallbackQuery, api_client: APICl
 
 
 @router.callback_query(F.data == "add_new_exercise")
-async def add_exercise_edit_mode(callback: CallbackQuery, api_client: APIClient, state: FSMContext):
+async def add_exercise_edit_mode(callback: CallbackQuery, api_client: APIClient, state: FSMContext, db_user: dict):
+    telegram_id = db_user.get("telegram_id")
+    request_headers = {
+        "X-Telegram-Id": str(telegram_id)
+    }
     try:
-        categories = await api_client.get(endpoint="/categories/")
+        categories = await api_client.get(endpoint="/categories/", headers=request_headers)
     except HTTPStatusError as e:
         logger.error(f"API Error: {e.response.status_code} - {e.response.text}")
         await callback.answer("⚠️ Something went wrong while loading categories. Please try again.", show_alert=True)
@@ -305,16 +306,20 @@ async def add_exercise_edit_mode(callback: CallbackQuery, api_client: APIClient,
 
 
 @router.callback_query(CategoryCallback.filter(), EditTrainingFSM.add_new_exercise)
-async def select_category(callback: CallbackQuery, callback_data: CategoryCallback, api_client: APIClient):
+async def select_category(callback: CallbackQuery, callback_data: CategoryCallback, api_client: APIClient, db_user: dict, state: FSMContext):
+    telegram_id = db_user.get("telegram_id")
+    request_headers = {
+        "X-Telegram-Id": str(telegram_id)
+    }
     try:
-        exercises = await api_client.get(f"/categories/{callback_data.id}/exercises")
+        exercises = await api_client.get(f"/categories/{callback_data.id}/exercises", headers=request_headers)
     except HTTPStatusError as e:
         logger.error(f"API Error: {e.response.status_code} - {e.response.text}")
         await callback.answer("⚠️ Something went wrong while loading exercises. Please try again.", show_alert=True)
         return
     if not exercises:
         return await callback.message.answer("Sorry, there are no exercises for this category.")
-    await callback.message.edit_text("Choose the exercise:", reply_markup=create_exercises_kb(exercises))
+    await callback.message.edit_text("Choose the exercise:", reply_markup=create_exercises_kb(exercises, callback_data.id))
     await callback.answer()
 
 

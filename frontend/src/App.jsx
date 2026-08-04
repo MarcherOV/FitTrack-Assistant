@@ -54,7 +54,7 @@ export default function App() {
     } catch (err) {
       setDataStatus('error')
       setDataError(
-        err?.response?.data?.detail || err.message || 'Не вдалося завантажити дані дашборду'
+        err?.response?.data?.detail || err.message || 'Unable to load dashboard data'
       )
     }
   }
@@ -103,7 +103,7 @@ export default function App() {
   ])
 
   if (authStatus === 'loading') {
-    return <LoadingScreen label="Авторизація через Telegram…" />
+    return <LoadingScreen label="Authorization via Telegram…" />
   }
 
   if (authStatus === 'widget-required') {
@@ -115,15 +115,13 @@ export default function App() {
   }
 
   if (dataStatus === 'loading' || dataStatus === 'idle') {
-    return <LoadingScreen label="Завантажуємо ваш прогрес…" />
+    return <LoadingScreen label="Loading your progress…" />
   }
 
   if (dataStatus === 'error') {
     return <ErrorScreen message={dataError} onRetry={loadDashboardData} />
   }
 
-  // Для графіків, що потребують повної історії, використовуємо allTrainings,
-  // поки вона ще вантажиться — падаємо назад на короткий список last-5.
   const trainingsForCharts = allTrainings.length ? allTrainings : trainings
   const measurementsForCharts = allMeasurements.length ? allMeasurements : measurements
 
@@ -148,7 +146,7 @@ export default function App() {
 
         {historyStatus === 'loading' && (
           <p className="text-tg-hint text-[11px] text-center -mt-2">
-            Довантажуємо повну історію для графіків прогресу…
+            Loading full history for progress charts…
           </p>
         )}
       </main>

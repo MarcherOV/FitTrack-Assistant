@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.db.database import get_session
 from src.schemas.users import UserGET, UserPOST
-from src. schemas.training import TrainingGET
+from src.schemas.training import TrainingGET
 from src.repositories.users import UserRepository
 from src.repositories.training import TrainingRepository
 from src.pagination.pagination import PaginatedResponse
