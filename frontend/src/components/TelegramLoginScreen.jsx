@@ -11,8 +11,8 @@ export default function TelegramLoginScreen({ onAuth }) {
       <div>
         <p className="text-tg-text font-semibold text-lg">Fitness Tracker</p>
         <p className="text-tg-hint text-sm max-w-xs mt-1">
-          Ви відкрили сторінку в звичайному браузері. Увійдіть через Telegram, щоб побачити свою
-          статистику.
+          You've opened this page in a regular browser. Log in via Telegram to view your
+          stats.
         </p>
       </div>
 
@@ -21,7 +21,7 @@ export default function TelegramLoginScreen({ onAuth }) {
       </div>
 
       <p className="text-tg-hint text-[11px] max-w-xs">
-        Або відкрийте бота напряму в Telegram і запустіть Mini App звідти.
+        Or open the bot directly in Telegram and launch the Mini App from there.
       </p>
     </div>
   )

@@ -1,7 +1,6 @@
 import { apiClient } from './client'
 
 /**
- * Отримати сторінку тренувань користувача.
  * @param {number|string} userId
  * @param {{page?: number, pageSize?: number}} options
  */
@@ -13,13 +12,12 @@ export async function fetchTrainings(userId, { page = 1, pageSize = 5 } = {}) {
 }
 
 /**
- * Підвантажує ВСІ тренування користувача (проходить усі сторінки).
- * Потрібно для графіків прогресу сили, теплокарти активності, тижневого тоннажу тощо,
- * де недостатньо останніх 5 записів.
+ * Loads ALL of the user's workouts (goes through all pages).
+ * Required for strength progress charts, activity heatmaps, weekly volume, etc.,
+ * where the last 5 entries are insufficient.
  *
- * Зупиняється, коли бекенд повертає порожню/неповну сторінку, або після maxPages
- * запобіжника, щоб не заблокувати додаток при дуже великій історії.
- *
+ * Stops when the backend returns an empty/incomplete page, or after reaching the maxPages
+ * limit to prevent the app from crashing when the history is very large.
  * @param {number|string} userId
  * @param {{pageSize?: number, maxPages?: number}} options
  */

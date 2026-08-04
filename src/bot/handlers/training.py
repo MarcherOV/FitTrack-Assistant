@@ -12,7 +12,7 @@ from src.bot.services.set_collector import handle_process_universal_field_input
 from src.bot.keyboards.start_kb import start_kb
 from src.bot.keyboards.training_kb import (CategoryCallback, ExerciseCallback, training_kb, set_kb,
                                             continue_set_adding_kb, create_categories_kb, create_exercises_kb,
-                                            date_choice_kb, duration_choice_kb)
+                                            date_choice_kb, duration_choice_kb, types_kb)
 
 from src.bot.services.exercise_type_config import EXERCISE_TYPE_CONFIG, FIELD_PROMPTS
 
@@ -23,6 +23,9 @@ class WorkoutFSM(StatesGroup):
     active_training = State()
     waiting_for_field_value = State()
     waiting_for_final_duration = State()
+
+    waiting_for_new_exercise_name = State()
+    waiting_for_new_exercise_type = State()
 
 
 router = Router()
@@ -122,8 +125,10 @@ async def create_training_record(event, state: FSMContext, api_client: APIClient
 
 @router.callback_query(F.data == "add_exercise")
 async def add_exercise(callback: CallbackQuery, api_client: APIClient, db_user: dict):
+    telegram_id = callback.from_user.id
+    request_headers = {"X-Telegram-Id": str(telegram_id)}
     try:
-        categories = await api_client.get(endpoint="/categories/")
+        categories = await api_client.get(endpoint="/categories/", headers=request_headers)
         if not categories:
             return await callback.message.answer("Sorry, there is no category")
         categories_kb = create_categories_kb(categories)
@@ -138,13 +143,15 @@ async def add_exercise(callback: CallbackQuery, api_client: APIClient, db_user: 
 @router.callback_query(CategoryCallback.filter(), WorkoutFSM.active_training)
 async def select_category(callback: CallbackQuery, callback_data: CategoryCallback, api_client: APIClient):
     category_id = callback_data.id
+    telegram_id = callback.from_user.id
+    request_headers = {"X-Telegram-Id": str(telegram_id)}
     try:
-        exercises = await api_client.get(f"/categories/{category_id}/exercises")
-        if not exercises:
-            return await callback.message.answer("Sorry, there is no exercise for this category")
+        exercises = await api_client.get(f"/categories/{category_id}/exercises", headers=request_headers)
         
-        exercises_kb = create_exercises_kb(exercises)
-        await callback.message.edit_text(text="Choose the exercise:", reply_markup=exercises_kb)
+        exercises = exercises or [] 
+        
+        exercises_kb = create_exercises_kb(exercises, category_id)
+        await callback.message.edit_text(text="Choose the exercise or create a new one:", reply_markup=exercises_kb)
         await callback.answer()
     except HTTPStatusError as e:
         logger.error(f"API Error: {e.response.status_code} - {e.response.text}")
@@ -160,6 +167,57 @@ async def select_exercise(callback: CallbackQuery, callback_data: ExerciseCallba
     await callback.message.edit_text(text=callback_data.name, reply_markup=set_kb)
     await callback.answer()
 
+@router.callback_query(F.data.startswith("create_ex_"), WorkoutFSM.active_training)
+async def process_create_custom_exercise(callback: CallbackQuery, state: FSMContext):
+    category_id = int(callback.data.split("_")[2])
+    await state.update_data(new_ex_category_id=category_id)
+    
+    await state.set_state(WorkoutFSM.waiting_for_new_exercise_name)
+    await callback.message.edit_text("📝 **Enter the name of your new exercise:**", parse_mode="Markdown")
+    await callback.answer()
+
+
+@router.message(WorkoutFSM.waiting_for_new_exercise_name)
+async def get_custom_exercise_name(message: Message, state: FSMContext):
+    await state.update_data(new_ex_name=message.text.strip())
+    await state.set_state(WorkoutFSM.waiting_for_new_exercise_type)
+    await message.answer("⚙️ **Select the type of your exercise:**", reply_markup=types_kb, parse_mode="Markdown")
+
+
+@router.callback_query(F.data.startswith("new_ex_type_"), WorkoutFSM.waiting_for_new_exercise_type)
+async def create_and_select_custom_exercise(callback: CallbackQuery, state: FSMContext, api_client: APIClient):
+    type_id = int(callback.data.split("_")[3])
+    data = await state.get_data()
+    
+    category_id = data.get("new_ex_category_id")
+    name = data.get("new_ex_name")
+
+    telegram_id = callback.from_user.id
+    request_headers = {"X-Telegram-Id": str(telegram_id)}
+
+    payload = {
+        "name": name,
+        "category_id": category_id,
+        "type_id": type_id
+    }
+    
+    try:
+        res = await api_client.post("/exercises/", json_data=payload, headers=request_headers)
+        exercise_id = res.get("id")
+        
+        await state.update_data(exercise_id=exercise_id, type_id=type_id)
+        await state.set_state(WorkoutFSM.active_training)
+        
+        await callback.message.edit_text(
+            f"✅ Exercise **{name}** successfully created and selected! You can now add sets.", 
+            reply_markup=set_kb, 
+            parse_mode="Markdown"
+        )
+        await callback.answer()
+    except HTTPStatusError as e:
+        logger.error(f"API Error creating exercise: {e}")
+        await state.set_state(WorkoutFSM.active_training)
+        await callback.message.answer("⚠️ Failed to create the exercise. Please try again.")
 
 @router.callback_query(F.data == "add_set", WorkoutFSM.active_training)
 async def start_adding_set(callback: CallbackQuery, api_client: APIClient, state: FSMContext):
@@ -254,8 +312,10 @@ async def add_set(callback: CallbackQuery, api_client: APIClient, state: FSMCont
 
 @router.callback_query(F.data == "back_to_categories")
 async def back_to_categories(callback: CallbackQuery, api_client: APIClient):
+    telegram_id = callback.from_user.id
+    request_headers = {"X-Telegram-Id": str(telegram_id)}
     try:
-        categories = await api_client.get(endpoint="/categories/")
+        categories = await api_client.get(endpoint="/categories/", headers=request_headers)
         categories_kb = create_categories_kb(categories)
         await callback.message.edit_text("Choose the category of exercise:", reply_markup=categories_kb)
         await callback.answer()

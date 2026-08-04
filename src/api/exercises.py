@@ -4,6 +4,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.db.database import get_session
 from src.schemas.exercises import *
 from src.repositories.exercises import *
+from src.api.dependencies import get_current_user
+from src.models.users import User
 
 router_exercise = APIRouter(prefix="/exercises", tags=["Exercises"])
 
@@ -19,8 +21,8 @@ async def get_all_exercises(session: AsyncSession = Depends(get_session)):
     exercises = await ExerciseRepository.get_all_exercises(session)
     return exercises
 
-@router_exercise.post("/", response_model=ExerciseGET, status_code=status.HTTP_201_CREATED)
-async def create_exercise(exercise_data: ExercisePOST, session: AsyncSession = Depends(get_session)):
+@router_exercise.post("/", response_model=ExerciseGET, status_code=status.HTTP_201_CREATED,)
+async def create_exercise(exercise_data: ExercisePOST, session: AsyncSession = Depends(get_session), current_user: User = Depends(get_current_user)):
     category = await CategoryRepository.get_category(session, exercise_data.category_id)
     if not category:
         raise HTTPException(
@@ -34,7 +36,7 @@ async def create_exercise(exercise_data: ExercisePOST, session: AsyncSession = D
             detail=f"Type with id {exercise_data.type_id} does not exist"
         )
     try:
-        exercise = await ExerciseRepository.create_exercise(session, exercise_data)
+        exercise = await ExerciseRepository.create_exercise(session, exercise_data, current_user.id)
         return exercise
     except IntegrityError:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Exercise with name '{exercise_data.name}' already exists.")
@@ -62,8 +64,8 @@ async def get_all_categories(session: AsyncSession = Depends(get_session)):
     return categories
 
 @router_category.get("/{category_id}/exercises", response_model=list[ExerciseGET], status_code=status.HTTP_200_OK)
-async def get_category_with_exercises(category_id: int, session: AsyncSession = Depends(get_session)):
-    category_with_exercises = await CategoryRepository.get_category_with_exercises(session, category_id)
+async def get_category_with_exercises(category_id: int, session: AsyncSession = Depends(get_session), current_user: User = Depends(get_current_user)):
+    category_with_exercises = await CategoryRepository.get_category_with_exercises(session, category_id, current_user.id)
     if not category_with_exercises:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="The category does not exist")
     return category_with_exercises.exercises

@@ -108,7 +108,7 @@ export default function MeasurementsRadar({ measurements }) {
                 tick={{ fill: 'var(--tg-theme-hint-color, #8b93a1)', fontSize: 11 }}
               />
               <Tooltip
-                formatter={(value) => [`${value} см`, 'Обхват']}
+                formatter={(value) => [`${value} cm`, 'Body circumference']}
                 contentStyle={{
                   backgroundColor: 'var(--tg-theme-bg-color, #ffffff)',
                   borderRadius: '8px',

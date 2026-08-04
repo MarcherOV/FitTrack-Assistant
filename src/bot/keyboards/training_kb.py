@@ -72,6 +72,13 @@ duration_choice_kb = InlineKeyboardMarkup(inline_keyboard=[
     [InlineKeyboardButton(text="❌ Cancel", callback_data="end_training")]
 ])
 
+types_kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="💪 Strength", callback_data="new_ex_type_1")],
+        [InlineKeyboardButton(text="🏃 Cardio", callback_data="new_ex_type_2")],
+        [InlineKeyboardButton(text="🤸 Bodyweight / Calisthenics", callback_data="new_ex_type_3")],
+        [InlineKeyboardButton(text="⏱ Timed / Isometric", callback_data="new_ex_type_4")]
+    ])
+
 def create_categories_kb(categories: list):
     keyboard = InlineKeyboardBuilder()
     for category in categories:
@@ -83,7 +90,7 @@ def create_categories_kb(categories: list):
     return keyboard.as_markup()
 
 
-def create_exercises_kb(exercises: list):
+def create_exercises_kb(exercises: list, category_id: int):
     keyboard = InlineKeyboardBuilder()
     for exercise in exercises:
         ex_name = str(exercise.get("name"))
@@ -92,6 +99,7 @@ def create_exercises_kb(exercises: list):
         keyboard.add(InlineKeyboardButton(text = ex_name, callback_data=ExerciseCallback(id=ex_id, name=ex_name, type_id=type_id).pack(), style="primary"))
 
     keyboard.adjust(3)
+    keyboard.row(InlineKeyboardButton(text="➕ Add own exercise", callback_data=f"create_ex_{category_id}"))
     keyboard.row(InlineKeyboardButton(text="Back to categories", callback_data="back_to_categories", style="danger"),)
     return keyboard.as_markup()
 

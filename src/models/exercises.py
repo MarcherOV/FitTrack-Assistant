@@ -12,9 +12,11 @@ class Exercise(Base):
     name: Mapped[str] = mapped_column(unique=True, nullable=False)
     category_id: Mapped[int] = mapped_column(ForeignKey("categories.id"), nullable=False)
     type_id: Mapped[int] = mapped_column(ForeignKey("types.id"), nullable=False)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=True)
 
     category: Mapped["Category"] = relationship("Category", back_populates="exercises")
     type: Mapped["Type"] = relationship("Type", back_populates="exercises")
+
 
 
 class Category(Base):

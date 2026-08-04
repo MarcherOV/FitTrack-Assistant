@@ -1,18 +1,11 @@
 import { differenceInCalendarDays, parseISO, startOfWeek, format } from 'date-fns'
 
-/**
- * Дістає вагу з об'єкта підходу, підтримуючи кілька можливих назв поля
- * (бекенди часто називають це по-різному).
- */
 export function getSetWeight(set) {
   const raw =
     set?.weight ?? set?.weight_kg ?? set?.kg ?? set?.load ?? set?.value ?? 0
   return Number(raw) || 0
 }
 
-/**
- * Дістає кількість повторень з об'єкта підходу, підтримуючи кілька можливих назв поля.
- */
 export function getSetReps(set) {
   const raw =
     set?.reps ??
@@ -26,7 +19,6 @@ export function getSetReps(set) {
 }
 
 /**
- * Розрахунок орієнтовного одноповторного максимуму (1ПМ) за формулою Еплі.
  * @param {number} weight
  * @param {number} reps
  */
@@ -36,18 +28,12 @@ export function estimateOneRepMax(weight, reps) {
   return weight * (1 + reps / 30)
 }
 
-/**
- * Тоннаж (volume) одного підходу: вага * повторення.
- */
 export function setVolume(set) {
   const weight = getSetWeight(set)
   const reps = getSetReps(set)
   return weight * reps
 }
 
-/**
- * Найважчий/найкращий підхід у списку сетів за розрахунковим 1ПМ.
- */
 export function bestSet(sets) {
   if (!sets?.length) return null
   return sets.reduce((best, s) => {
@@ -61,19 +47,12 @@ export function bestSet(sets) {
   }, null)
 }
 
-/**
- * Загальний тоннаж тренування (сума по всіх вправах і сетах).
- */
 export function trainingVolume(training) {
   return (training.exercises || []).reduce((sum, ex) => {
     return sum + (ex.sets || []).reduce((s, set) => s + setVolume(set), 0)
   }, 0)
 }
 
-/**
- * Будує мапу exerciseName -> [{date, oneRm, weight, reps, volume}]
- * відсортовану за зростанням дати, для побудови графіків прогресу сили.
- */
 export function buildExerciseHistory(trainings) {
   const map = new Map()
 
@@ -106,9 +85,6 @@ export function buildExerciseHistory(trainings) {
   return map
 }
 
-/**
- * Персональні рекорди по кожній вправі: макс. вага та макс. тоннаж за сесію.
- */
 export function buildPersonalRecords(exerciseHistoryMap) {
   const records = []
 
@@ -136,9 +112,7 @@ export function buildPersonalRecords(exerciseHistoryMap) {
   return records.sort((a, b) => b.sessionsCount - a.sessionsCount)
 }
 
-/**
- * Тижневий тоннаж по всіх тренуваннях: [{weekLabel, volume, sessions}]
- */
+
 export function buildWeeklyVolume(trainings) {
   const weeks = new Map()
 
@@ -165,12 +139,8 @@ export function buildWeeklyVolume(trainings) {
 }
 
 /**
- * Розподіл кількості підходів по категоріях вправ (напр. "Груди", "Спина", "Ноги").
- *
  * @param {Array} trainings
- * @param {Map<number, string>} categoriesMap - мапа category_id -> назва категорії,
- *   отримана з GET /categories/. Якщо не передано або ID не знайдено — групуємо
- *   за назвою вправи як fallback.
+ * @param {Map<number, string>} categoriesMap 
  */
 export function buildMuscleGroupDistribution(trainings, categoriesMap = new Map()) {
   const counts = new Map()
@@ -190,10 +160,6 @@ export function buildMuscleGroupDistribution(trainings, categoriesMap = new Map(
     .sort((a, b) => b.value - a.value)
 }
 
-/**
- * Поточна серія тренувань поспіль (у календарних днях, з допуском 1 пропущеного дня
- * не рахується — рахуємо просто унікальні дні тренувань, що йдуть підряд від сьогодні/вчора).
- */
 export function calculateStreak(trainings) {
   if (!trainings?.length) return 0
 
