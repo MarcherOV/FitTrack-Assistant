@@ -1,6 +1,6 @@
 import asyncio
-
 from aiogram import Bot, Dispatcher
+from aiogram.fsm.storage.redis import RedisStorage
 from aiogram.filters import CommandStart
 from aiogram.types import Message
 from dotenv import load_dotenv
@@ -19,7 +19,8 @@ TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 
 async def main():
     bot = Bot(TELEGRAM_TOKEN)
-    db = Dispatcher()
+    storage = RedisStorage.from_url("redis://localhost:6379/0")
+    db = Dispatcher(storage=storage, bot=bot)
 
     api_client = APIClient(base_url="http://127.0.0.1:8000/", secret_token=TELEGRAM_TOKEN)
 

@@ -29,35 +29,33 @@ def format_body_page(items: list[dict], page: int, total_pages: int) -> str:
     if not items:
         return "🤷‍♂️ There are no entries on this page."
 
-    lines = [f"🗓 **Your Body Info History (Page {page} of {total_pages}):**\n"]
+    lines = [f"🗓 *Your Body Info History (Page {page} of {total_pages}):*\n"]
 
     for t in items:
         date_str = datetime.fromisoformat(t["date"]).strftime("%d.%m.%Y %H:%M")
-        lines.append(f"🏋️ **Body Info #{t['id']} of {date_str}**")
+        lines.append(f"🏋️ *Body Info #{t['id']} of {date_str}*")
         weight = t["weight"]
         if weight:
-            lines.append(f"Weight: {weight}")
+            lines.append(f"*Weight:* {weight} kg")
         else:
             lines.append("No info about weight")
         measurements = t.get("measurements", [])
         if not measurements:
             lines.append("  _(empty body measurements)_")
         else:
-            lines.append(f"Measurements:")
+            lines.append(f"*Measurements:*")
             for ms in measurements:
                 ms_name = ms.get("measurements", {})
                 for key, name in BODY_PARTS.items():
-                    if key in ms_name:
+                    if key in ms_name and ms_name[key] is not None:
                         btn_text = f"{name}: {ms_name[key]} cm"
-                    else:
-                        btn_text = f"+ {name}"
-                    lines.append(btn_text)
+                        lines.append(btn_text)
         lines.append("")
 
     return "\n".join(lines)
 
 
-@router.message(F.text == "See all my body info")
+@router.message(F.text == "📈 See all my body info")
 async def see_all_body_info(message: Message, api_client: APIClient, db_user: dict):
     user_id = db_user.get("id")
 
@@ -147,7 +145,7 @@ async def start_editing_body_info(callback: CallbackQuery, callback_data: BodyIn
     await state.set_state(EditBodyInfoFSM.choose_what_to_edit)
 
     await callback.message.answer(
-        text="🛠 **Edit mode**\nWhat exactly would you like to update in this record?",
+        text="🛠 *Edit mode*\nWhat exactly would you like to update in this record?",
         reply_markup=create_edit_body_choice_kb(),
         parse_mode="Markdown"
     )
@@ -171,7 +169,7 @@ async def process_new_date(message: Message, state: FSMContext, api_client: APIC
             await api_client.patch(f"/body-info/{body_info_id}", json_data=payload)
             await state.clear()
             await message.answer(
-                        f"✅ **Success!** The body info date has been changed to **{dt}**.\nClick *See all my trainings* to view the updated list.",
+                        f"✅ *Success!* The body info date has been changed to *{dt}*.\nClick *See all my trainings* to view the updated list.",
                         reply_markup=start_kb
                     )
         else:
@@ -190,7 +188,7 @@ async def ask_for_new_weight(callback: CallbackQuery, state: FSMContext):
     await state.set_state(EditBodyInfoFSM.waiting_for_new_weight)
 
     await callback.message.edit_text(
-        "✍️ **Enter the new weight in kg** (e.g., *74.5*):",
+        "✍️ *Enter the new weight in kg* (e.g., *74.5*):",
         parse_mode="Markdown"
     )
     await callback.answer()
@@ -215,8 +213,8 @@ async def process_new_weight(message: Message, state: FSMContext, api_client: AP
         await state.clear()
 
         await message.answer(
-            f"✅ **Success!** Weight has been updated to **{new_weight} kg**.\n"
-            "Click *See all my body info* to check the updated list.",
+            f"✅ *Success!* Weight has been updated to *{new_weight} kg*.\n"
+            "Click *📈 See all my body info* to check the updated list.",
             reply_markup=start_kb,
             parse_mode="Markdown"
         )
@@ -232,7 +230,7 @@ async def show_measurements_menu(callback: CallbackQuery, state: FSMContext):
     await state.set_state(EditBodyInfoFSM.menu_measurements_to_edit)
 
     await callback.message.edit_text(
-        "📏 **Select a body part** to enter the measurement in centimeters:\n"
+        "📏 *Select a body part* to enter the measurement in centimeters:\n"
         "*(You can fill in only the required fields and then click “Save”)*",
         reply_markup=kb
     )
@@ -244,7 +242,7 @@ async def select_body_part_to_edit(callback: CallbackQuery, callback_data: BodyP
     await state.set_state(EditBodyInfoFSM.waiting_for_part_value_to_edit)
 
     await callback.message.edit_text(
-        f"✍️ Enter the volume for **{callback_data.part_name}** in centimeters (for example: *95.5*):"
+        f"✍️ Enter the volume for *{callback_data.part_name}* in centimeters (for example: *95.5*):"
     )
     await callback.answer()
 
@@ -268,7 +266,7 @@ async def process_measurements_value_to_edit(message: Message, state: FSMContext
 
     kb = create_measurements_to_edit_kb(measurements) 
     await message.answer(
-        f"👍 **{data.get('active_part_name')}**: {val} cm is saved\n\nSelect the next zone or save:",
+        f"👍 *{data.get('active_part_name')}*: {val} cm is saved\n\nSelect the next zone or save:",
         reply_markup=kb
     )
 
@@ -295,11 +293,11 @@ async def save_edited_measurements_json(callback: CallbackQuery, state: FSMConte
             })
         await state.clear()
 
-        report_lines = [f"• **{BODY_PARTS[k]}**: {v} cm" for k, v in measurements_dict.items()]
+        report_lines = [f"• *{BODY_PARTS[k]}*: {v} cm" for k, v in measurements_dict.items()]
         report = "\n".join(report_lines)
 
         await callback.message.edit_text(
-            f"🎉 **All edited data has been successfully saved to the history!**\n\n{report}"
+            f"🎉 *All edited data has been successfully saved to the history!*\n\n{report}"
         )
         await callback.message.answer("What would you like to do next?", reply_markup=start_kb)
     except HTTPStatusError as e:
