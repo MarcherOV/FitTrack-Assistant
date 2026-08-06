@@ -39,11 +39,11 @@ def format_trainings_page(items: list[dict], page: int, total_pages: int) -> str
     if not items:
         return "🤷‍♂️ There are no entries on this page."
 
-    lines = [f"🗓 **Your Workout History (Page {page} of {total_pages}):**\n"]
+    lines = [f"🗓 *Your Workout History (Page {page} of {total_pages}):*\n"]
 
     for t in items:
         date_str = datetime.fromisoformat(t["date"]).strftime("%d.%m.%Y %H:%M")
-        lines.append(f"🏋️ **Workout #{t['id']} of {date_str}**")
+        lines.append(f"🏋️ *Workout #{t['id']} of {date_str}*")
 
         exercises = t.get("exercises", [])
         if not exercises:
@@ -52,12 +52,12 @@ def format_trainings_page(items: list[dict], page: int, total_pages: int) -> str
             for ex in exercises:
                 ex_name = ex.get("exercise", {}).get("name", "Exercise")
                 sets_count = len(ex.get("sets", []))
-                lines.append(f"  🔹 **{ex_name}**: {sets_count} sets")
+                lines.append(f"  🔹 *{ex_name}*: {sets_count} sets")
         lines.append("")
 
     return "\n".join(lines)
 
-@router.message(F.text == "See all my trainings")
+@router.message(F.text == "📋 See all my trainings")
 async def see_all_trainings(message: Message, api_client: APIClient, db_user: dict):
     user_id = db_user.get("id")
     telegram_id = db_user.get("telegram_id")
@@ -128,7 +128,7 @@ async def start_editing_training(callback: CallbackQuery, callback_data: Trainin
     await state.update_data(editing_training_id=callback_data.id, editing_training_data=training_data)
     await state.set_state(EditTrainingFSM.choose_what_to_edit)
     await callback.message.answer(
-        "🛠 **Editing a Workout**\nWhat exactly do you want to change?",
+        "🛠 *Editing a Workout*\nWhat exactly do you want to change?",
         reply_markup=create_edit_training_choice_kb(),
         parse_mode="Markdown"
     )
@@ -152,7 +152,7 @@ async def process_new_date(message: Message, state: FSMContext, api_client: APIC
             await api_client.patch(f"/trainings/{training_id}", json_data=payload)
             await state.clear()
             await message.answer(
-                        f"✅ **Success!** The workout date has been changed to **{dt}**.\nClick *See all my trainings* to view the updated list.",
+                        f"✅ *Success!* The workout date has been changed to *{dt}*.\nClick *📋 See all my trainings* to view the updated list.",
                         reply_markup=start_kb
                     )
         else:
@@ -169,7 +169,7 @@ async def process_new_date(message: Message, state: FSMContext, api_client: APIC
 @router.callback_query(F.data == "tr_edit_duration", EditTrainingFSM.choose_what_to_edit)
 async def ask_new_duration(callback: CallbackQuery, state: FSMContext):
     await state.set_state(EditTrainingFSM.waiting_for_duration)
-    await callback.message.edit_text("⏱ **Enter a new workout duration in minutes** (for example: *60* or *45*):", parse_mode="Markdown")
+    await callback.message.edit_text("⏱ *Enter a new workout duration in minutes* (for example: *60* or *45*):", parse_mode="Markdown")
 
 
 @router.message(EditTrainingFSM.waiting_for_duration)
@@ -188,7 +188,7 @@ async def process_new_duration(message: Message, state: FSMContext, api_client: 
         await api_client.patch(f"/trainings/{training_id}", json_data=payload)
         await state.clear()
         await message.answer(
-            f"✅ **Success!** The workout duration has been changed to **{minutes} min**.\nClick *See all my trainings* to view the updated list.",
+            f"✅ *Success!* The workout duration has been changed to *{minutes} min*.\nClick *📋 See all my trainings* to view the updated list.",
             reply_markup=start_kb
         )
     except HTTPStatusError as e:

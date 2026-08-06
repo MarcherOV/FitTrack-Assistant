@@ -22,12 +22,12 @@ class BodyInfoFSM(StatesGroup):
     menu_measurements = State()
     waiting_for_part_value = State()
 
-@router.message(F.text == "Add body info")
+@router.message(F.text == "⚖️ Add body info")
 async def start_body_info(message: Message, state: FSMContext):
     await state.clear()
     await state.set_state(BodyInfoFSM.waiting_for_date)
     await message.answer(
-        "📅 **When were these measurements taken?**\n\n"
+        "📅 *When were these measurements taken?*\n\n"
         "Click below for today, or enter a custom date in `DD.MM.YYYY` format (for example: `28.07.2026`):",
         reply_markup=body_date_choice_kb,
         parse_mode="Markdown"
@@ -43,7 +43,6 @@ async def process_body_date_now(callback: CallbackQuery, state: FSMContext):
 async def process_body_date_custom(message: Message, state: FSMContext):
     try:
         dt = datetime.strptime(message.text.strip(), "%d.%m.%Y")
-        # Keep current hour/minute so the timestamp feels natural
         now = datetime.now()
         dt = dt.replace(hour=now.hour, minute=now.minute, second=0)
         
@@ -55,7 +54,7 @@ async def process_body_date_custom(message: Message, state: FSMContext):
 async def ask_for_weight(message: Message, state: FSMContext, is_callback: bool = False):
     await state.set_state(BodyInfoFSM.waiting_for_weight)
     text = (
-        "⚖️ **Enter your weight in kg** (for example: *75.5*):\n\n"
+        "⚖️ *Enter your weight in kg* (for example: *75.5*):\n\n"
         "Or click the button below if you want to record only your body measurements."
     )
     if is_callback:
@@ -90,7 +89,7 @@ async def process_weight_input(message: Message, state: FSMContext, api_client: 
 
         date_display = datetime.fromisoformat(date_str).strftime("%d.%m.%Y")
         await message.answer(
-            f"✅ Weight of **{weight} kg** saved for `{date_display}`!\n\n"
+            f"✅ Weight of *{weight} kg* saved for `{date_display}`!\n\n"
             "Would you like to add your body measurements (circumferences in cm)?",
             reply_markup=after_weight_kb,
             parse_mode="Markdown"
@@ -130,7 +129,7 @@ async def show_measurements_menu(callback: CallbackQuery, state: FSMContext):
     await state.set_state(BodyInfoFSM.menu_measurements)
 
     await callback.message.edit_text(
-        "📏 **Select a body part** to enter the measurement in centimeters:\n"
+        "📏 *Select a body part* to enter the measurement in centimeters:\n"
         "*(You can fill in only the required fields and then click “Save”)*",
         reply_markup=kb
     )
@@ -143,7 +142,7 @@ async def select_body_part_to_measure(callback: CallbackQuery, callback_data: Bo
     await state.set_state(BodyInfoFSM.waiting_for_part_value)
 
     await callback.message.edit_text(
-        f"✍️ Enter the volume for **{callback_data.part_name}** in centimeters (for example: *95.5*):"
+        f"✍️ Enter the volume for *{callback_data.part_name}* in centimeters (for example: *95.5*):"
     )
     await callback.answer()
 
@@ -167,7 +166,7 @@ async def process_measurements_value(message: Message, state: FSMContext):
 
     kb = create_measurements_kb(measurements)
     await message.answer(
-        f"👍 **{data.get('active_part_name')}**: {val} cm is saved\n\nSelect the next zone or save:",
+        f"👍 *{data.get('active_part_name')}*: {val} cm is saved\n\nSelect the next zone or save:",
         reply_markup=kb
     )
 
@@ -189,11 +188,11 @@ async def save_measurements_json(callback: CallbackQuery, state: FSMContext, api
         await api_client.post("/body-measurements/", json_data= payload)
         await state.clear()
 
-        report_lines = [f"• **{BODY_PARTS[k]}**: {v} cm" for k, v in measurements_dict.items()]
+        report_lines = [f"• *{BODY_PARTS[k]}*: {v} cm" for k, v in measurements_dict.items()]
         report = "\n".join(report_lines)
 
         await callback.message.edit_text(
-            f"🎉 **All data has been successfully saved to the history!**\n\n{report}"
+            f"🎉 *All data has been successfully saved to the history!*\n\n{report}"
         )
         await callback.message.answer("What would you like to do next?", reply_markup=start_kb)
     except HTTPStatusError as e:

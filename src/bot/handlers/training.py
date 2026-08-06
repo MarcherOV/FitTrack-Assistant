@@ -32,12 +32,12 @@ router = Router()
 
 logger = logging.getLogger(__name__)
 
-@router.message(F.text == "Add training")
+@router.message(F.text == "💪 Add training")
 async def start_add_training(message: Message, state: FSMContext):
     await state.clear()
     await state.set_state(WorkoutFSM.waiting_for_date)
     await message.answer(
-        "📅 **When did the practice take place?**\n\n"
+        "📅 *When did the practice take place?*\n\n"
         "Click the button below if you're working out today, or enter a date in the format `DD.MM.YYYY` (for example, `28.07.2026`):",
         reply_markup=date_choice_kb,
         parse_mode="Markdown"
@@ -64,7 +64,7 @@ async def process_date_custom(message: Message, state: FSMContext):
 async def ask_for_duration(message: Message, state: FSMContext, is_callback: bool = False):
     await state.set_state(WorkoutFSM.waiting_for_duration)
     text = (
-        "⏱ **How many minutes did the workout last?**\n\n"
+        "⏱ *How many minutes did the workout last?*\n\n"
         "Enter a number (for example, `60` or `45`), or click the button below to record the time after you finish your exercises:"
     )
     if is_callback:
@@ -107,7 +107,7 @@ async def create_training_record(event, state: FSMContext, api_client: APIClient
         
         date_display = datetime.fromisoformat(date_str).strftime("%d.%m.%Y")
         text = (
-            f"✅ **Workout #{training_id} successfully created!**\n"
+            f"✅ *Workout #{training_id} successfully created!*\n"
             f"📅 Date: `{date_display}` | ⏱ Duration: `{duration_minutes} min`\n\n"
             "Now add the first exercise:"
         )
@@ -173,7 +173,7 @@ async def process_create_custom_exercise(callback: CallbackQuery, state: FSMCont
     await state.update_data(new_ex_category_id=category_id)
     
     await state.set_state(WorkoutFSM.waiting_for_new_exercise_name)
-    await callback.message.edit_text("📝 **Enter the name of your new exercise:**", parse_mode="Markdown")
+    await callback.message.edit_text("📝 *Enter the name of your new exercise:*", parse_mode="Markdown")
     await callback.answer()
 
 
@@ -181,7 +181,7 @@ async def process_create_custom_exercise(callback: CallbackQuery, state: FSMCont
 async def get_custom_exercise_name(message: Message, state: FSMContext):
     await state.update_data(new_ex_name=message.text.strip())
     await state.set_state(WorkoutFSM.waiting_for_new_exercise_type)
-    await message.answer("⚙️ **Select the type of your exercise:**", reply_markup=types_kb, parse_mode="Markdown")
+    await message.answer("⚙️ *Select the type of your exercise:*", reply_markup=types_kb, parse_mode="Markdown")
 
 
 @router.callback_query(F.data.startswith("new_ex_type_"), WorkoutFSM.waiting_for_new_exercise_type)
@@ -209,7 +209,7 @@ async def create_and_select_custom_exercise(callback: CallbackQuery, state: FSMC
         await state.set_state(WorkoutFSM.active_training)
         
         await callback.message.edit_text(
-            f"✅ Exercise **{name}** successfully created and selected! You can now add sets.", 
+            f"✅ Exercise *{name}* successfully created and selected! You can now add sets.", 
             reply_markup=set_kb, 
             parse_mode="Markdown"
         )
@@ -340,14 +340,14 @@ async def back_to_start_menu(callback: CallbackQuery, state: FSMContext, api_cli
 
     if duration > 0 or not training_id:
         await state.clear()
-        await callback.message.edit_text("🎉 **The training session was a success!**\nWhat do we do next?", parse_mode="Markdown")
+        await callback.message.edit_text("🎉 *The training session was a success!*\nWhat do we do next?", parse_mode="Markdown")
         await callback.message.answer("Select an action from the menu:", reply_markup=start_kb)
         await callback.answer()
         return
 
     await state.set_state(WorkoutFSM.waiting_for_final_duration)
     await callback.message.edit_text(
-        "🏁 **The workout is over!**\n\n⏱ How many minutes did it last in total? (Enter a number, for example, `55`):",
+        "🏁 *The workout is over!*\n\n⏱ How many minutes did it last in total? (Enter a number, for example, `55`):",
         parse_mode="Markdown"
     )
     await callback.answer()
@@ -367,7 +367,7 @@ async def process_final_duration(message: Message, state: FSMContext, api_client
     try:
         await api_client.patch(f"/trainings/{training_id}", json_data=payload)
         await state.clear()
-        await message.answer(f"🎉 **Recorded: {minutes} min!** The workout has been saved in your history.", reply_markup=start_kb)
+        await message.answer(f"🎉 *Recorded: {minutes} min!* The workout has been saved in your history.", reply_markup=start_kb)
     except HTTPStatusError:
         logger.exception("Failed to patch final duration")
         await state.clear()
