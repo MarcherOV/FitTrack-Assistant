@@ -31,7 +31,7 @@ def custom_key_builder(
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    redis = aioredis.from_url("redis://localhost:6379")
+    redis = aioredis.from_url("redis://redis:6379")
     FastAPICache.init(RedisBackend(redis), prefix="fastapi-cache", key_builder=custom_key_builder)
     yield
     await redis.close()
@@ -40,7 +40,7 @@ app = FastAPI(title="FitTrack API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*", "https://property-nemeses-encroach.ngrok-free.dev", "http://localhost:5173"],
+    allow_origins=["*", "https://property-nemeses-encroach.ngrok-free.dev", "http://frontend:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

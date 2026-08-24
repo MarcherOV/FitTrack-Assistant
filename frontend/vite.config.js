@@ -10,10 +10,10 @@ export default defineConfig({
       'property-nemeses-encroach.ngrok-free.dev'
     ],
     proxy: {
-      '/api': 'http://127.0.0.1:8000',
-      '/users': 'http://127.0.0.1:8000',
-      '/categories': 'http://127.0.0.1:8000',
-      '/body-info': 'http://127.0.0.1:8000',
+      '/api': 'http://api:8000',
+      '/users': 'http://api:8000',
+      '/categories': 'http://api:8000',
+      '/body-info': 'http://api:8000',
     },
   }
 })
