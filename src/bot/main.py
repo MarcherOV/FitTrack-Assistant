@@ -19,10 +19,10 @@ TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 
 async def main():
     bot = Bot(TELEGRAM_TOKEN)
-    storage = RedisStorage.from_url("redis://localhost:6379/0")
+    storage = RedisStorage.from_url("redis://redis:6379/0")
     db = Dispatcher(storage=storage, bot=bot)
 
-    api_client = APIClient(base_url="http://127.0.0.1:8000/", secret_token=TELEGRAM_TOKEN)
+    api_client = APIClient(base_url="http://api:8000/", secret_token=TELEGRAM_TOKEN)
 
     db.update.outer_middleware(APIClientMiddleware(api_client))
     db.update.outer_middleware(UserAuthMiddleware())
