@@ -1,13 +1,13 @@
 # 🏋️‍♂️ Gym Progress & Fitness Tracker Bot
 
-A modern, production-ready ecosystem designed to track fitness progress, workouts, and body measurements. The project consists of a high-performance FastAPI backend, a Telegram Bot client, and a frontend interface, all communicating via a secure REST API and fully containerized using Docker.
+A modern, production-ready ecosystem designed to track fitness progress, workouts, and body measurements. The project consists of a high-performance FastAPI backend, a Telegram Bot client, and a frontend interface (Web & Telegram Mini App), all communicating via a secure REST API and fully containerized using Docker.
 
 ## 🚀 Tech Stack
 
 * **Backend:** FastAPI, Pydantic v2, Uvicorn
 * **Database & Cache:** PostgreSQL 15, Redis 7, SQLAlchemy (Async), Alembic
 * **Bot:** Python 3.11, Aiogram v3, HTTPX
-* **Frontend:** Vite, React, Tailwind CSS (Port 5173)
+* **Frontend:** Vite, React, Tailwind CSS (Web & Telegram Mini App)
 * **Infrastructure:** Docker, Docker Compose, Ngrok (for public URL tunneling)
 
 ## 📖 Project Overview
@@ -15,7 +15,7 @@ A modern, production-ready ecosystem designed to track fitness progress, workout
 This project is built to manage the training process efficiently and consists of several core components:
 1. **Core API (FastAPI):** A high-performance, asynchronous RESTful API. It handles business logic, data persistence, and relations between users, workouts, exercises, and sets.
 2. **Client (Aiogram Bot):** A Telegram bot that serves as the primary user interface for quick tracking. It communicates with the FastAPI server using `httpx`, acting as a trusted client with Service-to-Service authentication.
-3. **Frontend:** A web application for a richer user interface, accessible via a public Ngrok tunnel.
+3. **Frontend (Web & Telegram Mini App):** A web application for a richer user interface. It is designed to run both inside Telegram and in a regular web browser. It is exposed via a public Ngrok tunnel, as Telegram requires secure HTTPS domains for authentication and Mini App integration.
 
 ## 📐 API Architecture & Principles
 
@@ -152,8 +152,10 @@ After the containers have successfully started, you need to create the database 
 
 ### 🌐 Accessing the Services
 Once successfully deployed, you can interact with the project via the following access points:
-* **Telegram Bot:** Just send `/start` to your bot in Telegram.
-* **Frontend (React/Vite):** [http://localhost:5173](http://localhost:5173)
+
+* **Telegram Bot:** Send `/start` to your bot in Telegram to launch the core interface.
+* **Frontend (Web & Telegram Mini App):** Access via your configured Ngrok URL (e.g., `https://property-nemeses-encroach.ngrok-free.dev/`). This link works both inside Telegram and in a regular browser.
+  > ⚠️ **Important Note on Localhost:** Even when accessing the frontend in a regular desktop browser, **do not use `http://localhost:5173`**. Because the application integrates with Telegram, it requires a trusted domain for authentication. Opening `localhost` will result in a "Bot domain invalid" error. Always use the secure Ngrok HTTPS URL.
 * **Backend API Docs (Swagger):** [http://localhost:8000/docs](http://localhost:8000/docs)
 * **Ngrok Control Panel:** [http://localhost:4040](http://localhost:4040)
 
