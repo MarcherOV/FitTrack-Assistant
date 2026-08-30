@@ -62,13 +62,13 @@ async def ask_for_weight(message: Message, state: FSMContext, is_callback: bool 
     else:
         await message.answer(text, reply_markup=skip_weight_kb, parse_mode="Markdown")
 
-async def _create_base_body_info(api_client: APIClient, user_id: int, weight: float | None, date_str: str) -> int:
+async def _create_base_body_info(api_client: APIClient, user_id: int, weight: float | None, date_str: str, telegram_id: int) -> int:
     payload = {
         "user_id": user_id,
         "weight": weight,
         "date": date_str
     }
-    res = await api_client.post("/body-info/", json_data=payload)
+    res = await api_client.post("/body-info/", json_data=payload, telegram_id=telegram_id)
     return res.get("id")
 
 @router.message(BodyInfoFSM.waiting_for_weight)
@@ -83,7 +83,7 @@ async def process_weight_input(message: Message, state: FSMContext, api_client: 
     try:
         data = await state.get_data()
         date_str = data.get("body_date", datetime.now().isoformat())
-        body_info_id = await _create_base_body_info(api_client, db_user.get("id"), weight, date_str)
+        body_info_id = await _create_base_body_info(api_client=api_client, user_id=db_user.get("id"), weight=weight, date_str=date_str, telegram_id=message.from_user.id)
         await state.update_data(body_info_id = body_info_id, measurements = {})
         await state.set_state(BodyInfoFSM.menu_measurements)
 
@@ -105,7 +105,7 @@ async def process_skip_weight(callback: CallbackQuery, state: FSMContext, api_cl
         data = await state.get_data()
         date_str = data.get("body_date", datetime.now().isoformat())
         
-        body_info_id = await _create_base_body_info(api_client, db_user.get("id"), weight=None, date_str=date_str)
+        body_info_id = await _create_base_body_info(api_client, db_user.get("id"), weight=None, date_str=date_str, telegram_id=callback.from_user.id)
         await state.update_data(body_info_id=body_info_id, measurements={})
         await state.set_state(BodyInfoFSM.menu_measurements)
 
@@ -176,7 +176,7 @@ async def save_measurements_json(callback: CallbackQuery, state: FSMContext, api
     data = await state.get_data()
     measurements_dict = data.get("measurements", {})
     body_info_id = data.get("body_info_id")
-
+    telegram_id = callback.from_user.id
     if not measurements_dict:
         return await callback.answer("⚠️ You haven't entered any measurements!", show_alert=True)
     payload = {
@@ -185,7 +185,7 @@ async def save_measurements_json(callback: CallbackQuery, state: FSMContext, api
     }
     await callback.answer()
     try:
-        await api_client.post("/body-measurements/", json_data= payload)
+        await api_client.post("/body-measurements/", json_data = payload, telegram_id = telegram_id)
         await state.clear()
 
         report_lines = [f"• *{BODY_PARTS[k]}*: {v} cm" for k, v in measurements_dict.items()]

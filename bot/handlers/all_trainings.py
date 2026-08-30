@@ -63,7 +63,7 @@ async def see_all_trainings(message: Message, api_client: APIClient, db_user: di
     telegram_id = db_user.get("telegram_id")
     request_headers = {"X-Telegram-Id": str(telegram_id)}
     try:
-        data = await api_client.get(f"/users/{user_id}/trainings/", params={"page": 1, "page_size": 3}, headers=request_headers)
+        data = await api_client.get(f"/users/{user_id}/trainings/", params={"page": 1, "page_size": 3}, headers=request_headers, telegram_id=telegram_id)
         items = data.get("items", [])
         if not items:
             return await message.answer("🤷‍♂️ You don't have any saved workouts yet.")
@@ -89,7 +89,7 @@ async def process_training_pagination(
     telegram_id = db_user.get("telegram_id")
     request_headers = {"X-Telegram-Id": str(telegram_id)}
     try:
-        data = await api_client.get(f"/users/{user_id}/trainings/", headers=request_headers, params={"page": target_page, "page_size": 3})
+        data = await api_client.get(f"/users/{user_id}/trainings/", headers=request_headers, params={"page": target_page, "page_size": 3}, telegram_id=telegram_id)
         items = data.get("items", [])
         text = format_trainings_page(items=items, page=data["page"], total_pages=data["total_pages"])
         kb = create_paginated_training_kb(
@@ -111,7 +111,8 @@ async def ignore_noop_callback(callback: CallbackQuery):
 @router.callback_query(TrainingActionCallback.filter(F.action == "delete"))
 async def delete_training(callback: CallbackQuery, callback_data: TrainingActionCallback, api_client: APIClient):
     try:
-        await api_client.delete(f"/trainings/{callback_data.id}")
+        telegram_id = callback.from_user.id
+        await api_client.delete(f"/trainings/{callback_data.id}", telegram_id=telegram_id)
         await callback.message.delete()
         await callback.answer("✅ Record successfully deleted!", show_alert=False)
     except HTTPStatusError:
@@ -121,7 +122,8 @@ async def delete_training(callback: CallbackQuery, callback_data: TrainingAction
 @router.callback_query(TrainingActionCallback.filter(F.action == "edit"))
 async def start_editing_training(callback: CallbackQuery, callback_data: TrainingActionCallback, state: FSMContext, api_client: APIClient):
     try:
-        training_data = await api_client.get(f"/trainings/{callback_data.id}")
+        telegram_id = callback.from_user.id
+        training_data = await api_client.get(f"/trainings/{callback_data.id}", telegram_id=telegram_id)
     except HTTPStatusError:
         return await callback.answer("❌ The workout could not be loaded.", show_alert=True)
 
@@ -149,7 +151,8 @@ async def process_new_date(message: Message, state: FSMContext, api_client: APIC
             data = await state.get_data()
             training_id = data.get("editing_training_id")
             payload = {"date": dt.isoformat()}
-            await api_client.patch(f"/trainings/{training_id}", json_data=payload)
+            telegram_id = message.from_user.id
+            await api_client.patch(f"/trainings/{training_id}", json_data=payload, telegram_id=telegram_id)
             await state.clear()
             await message.answer(
                         f"✅ *Success!* The workout date has been changed to *{dt}*.\nClick *📋 See all my trainings* to view the updated list.",
@@ -185,7 +188,8 @@ async def process_new_duration(message: Message, state: FSMContext, api_client: 
     payload = {"duration_time": int(timedelta(minutes=minutes).total_seconds())}
 
     try:
-        await api_client.patch(f"/trainings/{training_id}", json_data=payload)
+        telegram_id = message.from_user.id
+        await api_client.patch(f"/trainings/{training_id}", json_data=payload, telegram_id=telegram_id)
         await state.clear()
         await message.answer(
             f"✅ *Success!* The workout duration has been changed to *{minutes} min*.\nClick *📋 See all my trainings* to view the updated list.",
@@ -211,7 +215,8 @@ async def ask_to_choose_exercise_to_edit(callback: CallbackQuery, state: FSMCont
 @router.callback_query(TrainingExerciseCallback.filter())
 async def ask_to_choose_set_to_edit(callback: CallbackQuery, callback_data: TrainingExerciseCallback, state: FSMContext, api_client: APIClient):
     try:
-        set_data = await api_client.get(f"/training-exercises/{callback_data.id}/sets")
+        telegram_id = callback.from_user.id
+        set_data = await api_client.get(f"/training-exercises/{callback_data.id}/sets", telegram_id=telegram_id)
         await state.update_data(
             exercise_name=callback_data.exercise_name,
             training_exercise_id=callback_data.id,
@@ -266,9 +271,9 @@ async def start_adding_exercise_and_first_set(callback: CallbackQuery, api_clien
     training_id = data["editing_training_id"]
     exercise_id = data["exercise_id"]
     fields_to_fill = EXERCISE_TYPE_CONFIG.get(data.get("type_id"), ["weight", "repetitions"]).copy()
-
+    telegram_id = callback.from_user.id
     try:
-        res = await api_client.post(f"/trainings/{training_id}/exercises", json_data={"exercise_id": exercise_id, "sets": []})
+        res = await api_client.post(f"/trainings/{training_id}/exercises", json_data={"exercise_id": exercise_id, "sets": []}, telegram_id=telegram_id)
         await state.update_data(training_exercise_id=res.get("id"), remaining_fields=fields_to_fill, action="add", current_set_payload={}, current_set_number=1)
         await callback.answer()
         await ask_next_field(callback.message, state, api_client)

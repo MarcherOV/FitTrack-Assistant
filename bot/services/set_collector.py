@@ -29,11 +29,12 @@ async def handle_ask_next_field(
     training_exercise_id = data.get("training_exercise_id")
     collected_payload = data.get("current_set_payload", {})
     action = data.get("action", "add") # "add" or "edit"
+    telegram_id = message.from_user.id
 
     try:
         if action == "edit":
             set_id = data.get("set_id")
-            await api_client.patch(f"/sets/{set_id}", json_data=collected_payload)
+            await api_client.patch(f"/sets/{set_id}", json_data=collected_payload, telegram_id=telegram_id)
             await state.set_state(idle_state)
             return await message.answer("✅ Set successfully updated!", reply_markup=success_keyboard)
             
@@ -41,11 +42,11 @@ async def handle_ask_next_field(
             if "current_set_number" in data:
                 set_number = data["current_set_number"]
             else:
-                sets_ex = await api_client.get(f"/training-exercises/{training_exercise_id}/sets")
+                sets_ex = await api_client.get(f"/training-exercises/{training_exercise_id}/sets", telegram_id=telegram_id)
                 set_number = len(sets_ex) + 1 if sets_ex else 1
             collected_payload["set_number"] = set_number
             
-            data_res = await api_client.post(f"/training-exercises/{training_exercise_id}/sets", json_data=collected_payload)
+            data_res = await api_client.post(f"/training-exercises/{training_exercise_id}/sets", json_data=collected_payload, telegram_id=telegram_id)
             await state.update_data(current_set_number=set_number + 1)
             await state.set_state(idle_state)
             set_id = data_res.get("id")
