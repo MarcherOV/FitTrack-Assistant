@@ -90,6 +90,16 @@ class BodyMeasurementRepository:
         query = select(BodyMeasurement).where(BodyMeasurement.id == body_measurement_id)
         result = await session.execute(query)
         return result.scalar_one_or_none()
+
+    @staticmethod
+    async def get_body_measurement_with_owner(session: AsyncSession, body_measurement_id: int) -> BodyMeasurement | None:
+        query = (
+            select(BodyMeasurement)
+            .where(BodyMeasurement.id == body_measurement_id)
+            .options(selectinload(BodyMeasurement.body_info))
+        )
+        result = await session.execute(query)
+        return result.scalar_one_or_none()
     
     @staticmethod
     async def get_all_body_measurement_by_body_info_id(session: AsyncSession, body_info_id: int) -> list[BodyMeasurement]:

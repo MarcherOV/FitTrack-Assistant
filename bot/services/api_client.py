@@ -49,19 +49,36 @@ class APIClient:
             )
             raise
 
-    async def get(self, endpoint: str, params: Optional[Dict[str, Any]] = None, headers: Optional[Dict[str, str]] = None) -> Any:
+    async def get(self, endpoint: str, telegram_id: int = None, params: Optional[Dict[str, Any]] = None, headers: Optional[Dict[str, str]] = None) -> Any:
+        if telegram_id:
+            if headers is None:
+                headers = {}
+            headers["X-Telegram-Id"] = str(telegram_id)
         return await self._request("GET", endpoint, params, headers=headers)
     
-    async def post(self, endpoint: str, params: Optional[Dict[str, Any]] = None,
+    async def post(self, endpoint: str, telegram_id: int = None, params: Optional[Dict[str, Any]] = None,
                        json_data: Optional[Dict[str, Any]] = None, headers: Optional[Dict[str, str]] = None) -> Any:
+        if telegram_id:
+            if headers is None:
+                headers = {}
+            headers["X-Telegram-Id"] = str(telegram_id)
         return await self._request("POST", endpoint, params, json_data, headers=headers)
     
-    async def patch(self, endpoint: str, params: Optional[Dict[str, Any]] = None,
+    async def patch(self, endpoint: str, telegram_id: int = None, params: Optional[Dict[str, Any]] = None,
                        json_data: Optional[Dict[str, Any]] = None, headers: Optional[Dict[str, str]] = None) -> Any:
+        if telegram_id:
+            if headers is None:
+                headers = {}
+            headers["X-Telegram-Id"] = str(telegram_id)
         return await self._request("PATCH", endpoint, params, json_data, headers=headers)
-    
-    async def delete(self, endpoint: str, params: Optional[Dict[str, Any]] = None, headers: Optional[Dict[str, str]] = None) -> Any:
-        return await self._request("DELETE", endpoint, headers=headers)
+
+    async def delete(self, endpoint: str, telegram_id: int = None, params: Optional[Dict[str, Any]] = None, headers: Optional[Dict[str, str]] = None) -> Any:
+        if telegram_id:
+            if headers is None:
+                headers = {}
+            headers["X-Telegram-Id"] = str(telegram_id)
+        return await self._request("DELETE", endpoint, params, headers=headers)
+
     
     async def close(self) -> None:
         await self._client.aclose()

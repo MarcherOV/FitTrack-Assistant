@@ -117,8 +117,9 @@ async def ignore_noop_callback(callback: CallbackQuery):
 async def delete_body_info(callback: CallbackQuery, callback_data: BodyInfoActionCallback,
                           api_client: APIClient):
     body_info_id = callback_data.id
+    telegram_id = callback.from_user.id
     try:
-        await api_client.delete(f"/body-info/{body_info_id}")
+        await api_client.delete(f"/body-info/{body_info_id}", telegram_id=telegram_id)
 
         await callback.message.delete()
 
@@ -135,7 +136,8 @@ async def start_editing_body_info(callback: CallbackQuery, callback_data: BodyIn
     current_measurements = {}
     if measurement_id:
         try:
-            res = await api_client.get(f"/body-measurements/{measurement_id}")
+            telegram_id = callback.from_user.id
+            res = await api_client.get(f"/body-measurements/{measurement_id}", telegram_id=telegram_id)
             current_measurements = res.get("measurements", {})
         except HTTPStatusError:
             logger.warning(f"Failed to load measurements for body info ID {target_id}")
@@ -166,7 +168,8 @@ async def process_new_date(message: Message, state: FSMContext, api_client: APIC
             data = await state.get_data()
             body_info_id = data.get("editing_body_info_id")
             payload = {"date": dt.isoformat()}
-            await api_client.patch(f"/body-info/{body_info_id}", json_data=payload)
+            telegram_id = message.from_user.id
+            await api_client.patch(f"/body-info/{body_info_id}", json_data=payload, telegram_id=telegram_id)
             await state.clear()
             await message.answer(
                         f"✅ *Success!* The body info date has been changed to *{dt}*.\nClick *See all my trainings* to view the updated list.",
@@ -209,7 +212,8 @@ async def process_new_weight(message: Message, state: FSMContext, api_client: AP
     }
 
     try:
-        await api_client.patch(f"/body-info/{target_id}", json_data= payload)
+        telegram_id = message.from_user.id
+        await api_client.patch(f"/body-info/{target_id}", json_data=payload, telegram_id=telegram_id)
         await state.clear()
 
         await message.answer(
@@ -283,14 +287,15 @@ async def save_edited_measurements_json(callback: CallbackQuery, state: FSMConte
     }
     await callback.answer()
     try:
+        telegram_id = callback.from_user.id
         if body_measurements_id:
-            await api_client.patch(f"/body-measurements/{body_measurements_id}", json_data={"measurements": measurements_dict})
+            await api_client.patch(f"/body-measurements/{body_measurements_id}", json_data={"measurements": measurements_dict}, telegram_id=telegram_id)
         else:
             body_info_id = data.get("editing_body_info_id")
             await api_client.post("/body-measurements/", json_data={
                 "body_info_id": body_info_id,
-                "measurements": measurements_dict
-            })
+                "measurements": measurements_dict,
+            }, telegram_id=telegram_id)
         await state.clear()
 
         report_lines = [f"• *{BODY_PARTS[k]}*: {v} cm" for k, v in measurements_dict.items()]

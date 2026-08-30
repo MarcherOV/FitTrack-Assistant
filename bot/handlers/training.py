@@ -74,7 +74,7 @@ async def ask_for_duration(message: Message, state: FSMContext, is_callback: boo
 
 @router.callback_query(F.data == "duration_skip", WorkoutFSM.waiting_for_duration)
 async def process_duration_skip(callback: CallbackQuery, state: FSMContext, api_client: APIClient, db_user: dict):
-    await create_training_record(callback, state, api_client, db_user.get("id"), duration_minutes=0)
+    await create_training_record(callback, state, api_client, callback.from_user.id, duration_minutes=0)
     await callback.answer()
 
 @router.message(WorkoutFSM.waiting_for_duration)
@@ -99,7 +99,7 @@ async def create_training_record(event, state: FSMContext, api_client: APIClient
     }
     
     try:
-        res = await api_client.post("/trainings/", json_data=payload)
+        res = await api_client.post("/trainings/", json_data=payload, telegram_id=user_id)
         training_id = res.get("id")
         
         await state.update_data(training_id=training_id, duration_minutes=duration_minutes)
@@ -128,7 +128,7 @@ async def add_exercise(callback: CallbackQuery, api_client: APIClient, db_user: 
     telegram_id = callback.from_user.id
     request_headers = {"X-Telegram-Id": str(telegram_id)}
     try:
-        categories = await api_client.get(endpoint="/categories/", headers=request_headers)
+        categories = await api_client.get(endpoint="/categories/", headers=request_headers, telegram_id=telegram_id)
         if not categories:
             return await callback.message.answer("Sorry, there is no category")
         categories_kb = create_categories_kb(categories)
@@ -225,7 +225,7 @@ async def start_adding_set(callback: CallbackQuery, api_client: APIClient, state
     training_id = data_workout["training_id"]
     exercise_id = data_workout["exercise_id"]
     type_id = data_workout.get("type_id")
-
+    telegram_id = callback.from_user.id
     fields_to_fill = EXERCISE_TYPE_CONFIG.get(type_id, ["weight", "repetitions"]).copy()
 
     payload = {
@@ -233,7 +233,7 @@ async def start_adding_set(callback: CallbackQuery, api_client: APIClient, state
         "sets": []
     }
     try:
-        data = await api_client.post(f"/trainings/{training_id}/exercises", json_data=payload)
+        data = await api_client.post(f"/trainings/{training_id}/exercises", json_data=payload, telegram_id = telegram_id)
         await state.update_data(training_exercise_id=data.get("id"),
         remaining_fields=fields_to_fill,
         current_set_payload={},
@@ -249,7 +249,7 @@ async def start_adding_set(callback: CallbackQuery, api_client: APIClient, state
 async def ask_next_field(message: Message, state: FSMContext, api_client: APIClient):
     data = await state.get_data()
     remaining_fields: list = data.get("remaining_fields", [])
-    
+    telegram_id = message.from_user.id
     if remaining_fields:
         next_field = remaining_fields[0]
         await state.update_data(current_field=next_field)
@@ -267,7 +267,7 @@ async def ask_next_field(message: Message, state: FSMContext, api_client: APICli
     try:
         data_res = await api_client.post(
             f"/training-exercises/{training_exercise_id}/sets", 
-            json_data=collected_payload
+            json_data=collected_payload, telegram_id=telegram_id
         )
         set_id = data_res.get("id")
         
@@ -357,15 +357,16 @@ async def process_final_duration(message: Message, state: FSMContext, api_client
     try:
         minutes = int(message.text.strip())
         if minutes <= 0: raise ValueError
-    except ValueError:
+    except ValueError: 
         return await message.answer("⚠️ Enter the correct number of minutes (a positive integer):")
         
     data = await state.get_data()
     training_id = data.get("training_id")
+    telegram_id = message.from_user.id
     payload = {"duration_time": int(timedelta(minutes=minutes).total_seconds())}
     
     try:
-        await api_client.patch(f"/trainings/{training_id}", json_data=payload)
+        await api_client.patch(f"/trainings/{training_id}", json_data=payload, telegram_id=telegram_id)
         await state.clear()
         await message.answer(f"🎉 *Recorded: {minutes} min!* The workout has been saved in your history.", reply_markup=start_kb)
     except HTTPStatusError:
