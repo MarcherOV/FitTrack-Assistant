@@ -11,3 +11,7 @@ pydantic==2.13.4
 pydantic-settings==2.14.2
 redis==4.6.0
 jinja2
+pytest
+pytest-asyncio
+httpx
+pytest-mock

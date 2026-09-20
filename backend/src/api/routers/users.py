@@ -11,7 +11,7 @@ from src.models.users import User
 from math import ceil
 router = APIRouter(prefix="/users", tags=["Users"])
 
-@router.post("/", response_model=UserPOST, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=UserGET, status_code=status.HTTP_201_CREATED)
 async def create_user(user_data: UserPOST, session: AsyncSession = Depends(get_session)):
     existing_user = await UserRepository.get_user_by_telegram_id(session, user_data.telegram_id)
     if existing_user:
