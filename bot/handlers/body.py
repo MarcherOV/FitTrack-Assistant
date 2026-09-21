@@ -142,7 +142,8 @@ async def select_body_part_to_measure(callback: CallbackQuery, callback_data: Bo
     await state.set_state(BodyInfoFSM.waiting_for_part_value)
 
     await callback.message.edit_text(
-        f"✍️ Enter the volume for *{callback_data.part_name}* in centimeters (for example: *95.5*):"
+        f"✍️ Enter the volume for *{callback_data.part_name}* in centimeters (for example: *95.5*):",
+        parse_mode="Markdown"
     )
     await callback.answer()
 
@@ -192,9 +193,9 @@ async def save_measurements_json(callback: CallbackQuery, state: FSMContext, api
         report = "\n".join(report_lines)
 
         await callback.message.edit_text(
-            f"🎉 *All data has been successfully saved to the history!*\n\n{report}"
+            f"🎉 *All data has been successfully saved to the history!*\n\n{report}", parse_mode="Markdown"
         )
-        await callback.message.answer("What would you like to do next?", reply_markup=start_kb)
+        await callback.message.answer("What would you like to do next?", reply_markup=start_kb, parse_mode="Markdown")
     except HTTPStatusError as e:
         await callback.message.answer("❌ An error occurred while saving the measurements on the backend.")
 

@@ -141,7 +141,7 @@ async def add_exercise(callback: CallbackQuery, api_client: APIClient, db_user: 
 
 
 @router.callback_query(CategoryCallback.filter(), WorkoutFSM.active_training)
-async def select_category(callback: CallbackQuery, callback_data: CategoryCallback, api_client: APIClient):
+async def select_category(callback: CallbackQuery, callback_data: CategoryCallback, api_client: APIClient, state: FSMContext):
     category_id = callback_data.id
     telegram_id = callback.from_user.id
     request_headers = {"X-Telegram-Id": str(telegram_id)}
@@ -151,7 +151,9 @@ async def select_category(callback: CallbackQuery, callback_data: CategoryCallba
         exercises = exercises or [] 
         
         exercises_kb = create_exercises_kb(exercises, category_id)
+
         await callback.message.edit_text(text="Choose the exercise or create a new one:", reply_markup=exercises_kb)
+        await state.update_data(category_id = category_id)
         await callback.answer()
     except HTTPStatusError as e:
         logger.error(f"API Error: {e.response.status_code} - {e.response.text}")
@@ -309,6 +311,26 @@ async def add_set(callback: CallbackQuery, api_client: APIClient, state: FSMCont
     await callback.answer()
     await ask_next_field(callback.message, state, api_client)
 
+@router.callback_query(F.data == "back_to_exercises")
+async def back_to_exercises(callback: CallbackQuery, api_client: APIClient, state: FSMContext):
+    data = await state.get_data()
+    category_id = data.get("category_id")
+    telegram_id = callback.from_user.id
+    request_headers = {"X-Telegram-Id": str(telegram_id)}
+    try:
+        exercises = await api_client.get(f"/categories/{category_id}/exercises", headers=request_headers)
+    
+        exercises = exercises or [] 
+        
+        exercises_kb = create_exercises_kb(exercises, category_id)
+    
+        await callback.message.edit_text(text="Choose the exercise or create a new one:", reply_markup=exercises_kb)
+        await state.update_data(category_id = category_id)
+        await callback.answer()
+    except HTTPStatusError as e:
+        logger.error(f"API Error: {e.response.status_code} - {e.response.text}")
+        await callback.message.answer("⚠️ Something went wrong while saving the data to the server. Please try again later.")
+        
 
 @router.callback_query(F.data == "back_to_categories")
 async def back_to_categories(callback: CallbackQuery, api_client: APIClient):
