@@ -1,6 +1,6 @@
 # 🏋️‍♂️ Gym Progress & Fitness Tracker Bot
 
-A modern, production-ready ecosystem designed to track fitness progress, workouts, and body measurements. The project consists of a high-performance **FastAPI** backend, a **Telegram Bot** client, and a **frontend** interface (Web & Telegram Mini App), all communicating via a secure REST API and fully containerized using Docker.
+A modern ecosystem designed to track fitness progress, workouts, and body measurements. The project consists of a high-performance **FastAPI** backend, a **Telegram Bot** client, and a **frontend** interface (Web & Telegram Mini App), all communicating via a secure REST API and fully containerized using Docker.
 
 ---
 
