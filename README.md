@@ -1,11 +1,12 @@
 # 🏋️‍♂️ Gym Progress & Fitness Tracker Bot
 
-A modern ecosystem designed to track fitness progress, workouts, and body measurements. The project consists of a high-performance **FastAPI** backend, a **Telegram Bot** client, and a **frontend** interface (Web & Telegram Mini App), all communicating via a secure REST API and fully containerized using Docker.
+A modern, production-ready ecosystem designed to track fitness progress, workouts, and body measurements. The project consists of a high-performance **FastAPI** backend, a **Telegram Bot** client, and a **frontend** interface (Web & Telegram Mini App), all communicating via a secure REST API and fully containerized using Docker.
 
 ---
 
 ## 📑 Table of Contents
 
+- [Demo](#-demo)
 - [Tech Stack](#-tech-stack)
 - [Project Overview](#-project-overview)
 - [API Architecture & Principles](#-api-architecture--principles)
@@ -15,6 +16,37 @@ A modern ecosystem designed to track fitness progress, workouts, and body measur
 - [Testing](#-testing)
 - [Accessing the Services](#-accessing-the-services)
 - [Stopping the Application](#-stopping-the-application)
+
+---
+
+## 📸 Demo
+
+### 🤖 Telegram Bot
+
+[https://github.com/user-attachments/assets/YOUR-BOT-VIDEO-ID](https://github.com/user-attachments/assets/c14c95a2-732a-4a00-b1ba-5d3a516d22e6)
+
+<p align="center">
+  <img width="1687" height="460" alt="Image" src="https://github.com/user-attachments/assets/c2a4004f-21b3-4e58-845d-d39ccbac408e" />
+  <img width="1677" height="798" alt="Image" src="https://github.com/user-attachments/assets/ca8a4cca-e702-49a9-b5c1-425d41607457" />
+  <img width="1678" height="882" alt="Image" src="https://github.com/user-attachments/assets/9e1ca7c8-1375-4674-b42f-ba693a21ff70" />
+</p>
+
+### 🌐 Web & Telegram Mini App
+
+[https://github.com/user-attachments/assets/YOUR-FRONTEND-VIDEO-ID](https://github.com/user-attachments/assets/9dd9cad0-8115-4281-86a8-4788f3a89aea)
+
+<p align="center">
+  <img width="2547" height="997" alt="Image" src="https://github.com/user-attachments/assets/267b0981-f472-4d78-9ea8-a38df40f03e6" />
+  <img width="456" height="706" alt="Image" src="https://github.com/user-attachments/assets/28b8b746-5f48-4ace-93dd-9bb54bf70eae" />
+</p>
+
+### 📘 API Docs (Swagger)
+
+<p align="center">
+  <img width="1442" height="1175" alt="Image" src="https://github.com/user-attachments/assets/4fe657c8-6064-4044-8f72-2fb3600582f8" />
+  <img width="1441" height="1157" alt="Image" src="https://github.com/user-attachments/assets/1d8031b3-2a3b-4bad-a6a7-ff72a2a6ae97" />
+  <img width="1452" height="872" alt="Image" src="https://github.com/user-attachments/assets/dd19a254-b6e3-4c20-8f32-7ff735b81712" />
+</p>
 
 ---
 
