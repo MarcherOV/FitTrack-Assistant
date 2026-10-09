@@ -23,7 +23,7 @@ A modern ecosystem designed to track fitness progress, workouts, and body measur
 
 ### 🤖 Telegram Bot
 
-[https://github.com/user-attachments/assets/c14c95a2-732a-4a00-b1ba-5d3a516d22e6]
+https://github.com/user-attachments/assets/c14c95a2-732a-4a00-b1ba-5d3a516d22e6
 
 <p align="center">
   <img width="1687" height="460" alt="Image" src="https://github.com/user-attachments/assets/c2a4004f-21b3-4e58-845d-d39ccbac408e" />
@@ -33,7 +33,7 @@ A modern ecosystem designed to track fitness progress, workouts, and body measur
 
 ### 🌐 Web & Telegram Mini App
 
-[https://github.com/user-attachments/assets/9dd9cad0-8115-4281-86a8-4788f3a89aea]
+https://github.com/user-attachments/assets/9dd9cad0-8115-4281-86a8-4788f3a89aea
 
 <p align="center">
   <img width="2547" height="997" alt="Image" src="https://github.com/user-attachments/assets/267b0981-f472-4d78-9ea8-a38df40f03e6" />
